@@ -1,0 +1,16 @@
+[package]
+name = "buffi_macro"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+proc-macro2 = "1.0.89"
+syn = { version = "2.0.85", features = ["full", "extra-traits"] }
+quote = "1.0.37"
+
+[lib]
+proc-macro = true
+
+[features]
+with_c_api = []
+default = ["with_c_api"]

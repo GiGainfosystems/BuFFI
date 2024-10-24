@@ -1,0 +1,20 @@
+[package]
+name = "buffi"
+description = "A tool to generate ergonomic, buffer-based C++ APIs."
+version = "0.1.0+rust.1.82.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+documentation = "https://docs.rs/buffi"
+repository = "https://github.com/GiGainfosystems/BuFFI"
+keywords = ["FFI", "API", "C", "bincode", "serde"]
+
+[dependencies]
+serde = { version = "1.0.213", features = ["derive"] }
+serde_json = "1.0.132"
+toml = "0.8.19"
+serde-generate = { version = "0.26.0", default-features = false, features = ["cpp"] }
+serde-reflection = "0.4.0"
+rustdoc-types = "0.27.0"
+
+[workspace]
+members = ["buffi_macro", "."]
