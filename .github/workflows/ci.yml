@@ -1,0 +1,26 @@
+on:
+  merge_group:
+    types: [checks_requested]
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+name: BuFFI CI
+
+jobs:  
+  rustfmt_and_clippy:
+    name: Check rustfmt style && run clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.82.0
+        with:
+          components: clippy, rustfmt
+      - name: Set environment variables
+        shell: bash
+        run: |
+          echo "RUSTFLAGS=-D warnings" >> $GITHUB_ENV
+          echo "RUSTDOCFLAGS=-D warnings" >> $GITHUB_ENV
+      - name: Run clippy
+        run: cargo clippy --workspace
+      - name: Run rustfmt
+        run: cargo fmt --all --check
