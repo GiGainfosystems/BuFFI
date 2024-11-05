@@ -13,4 +13,5 @@ proc-macro = true
 
 [features]
 with_c_api = []
+with_tracing = []
 default = ["with_c_api"]

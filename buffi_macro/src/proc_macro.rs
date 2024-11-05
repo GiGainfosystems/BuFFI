@@ -195,12 +195,33 @@ fn generate_exported_function<'a>(
         None
     };
 
+    let (
+        mut tracing_pointer,
+        mut tracing_out_pointer,
+        mut tracing_skip,
+        mut tracing_error,
+        mut tracing_serializable_e,
+        mut tracing_serializable_w,
+        mut allow_unwrap_default,
+    ) = Default::default();
+
+    if cfg!(feature = "with_tracing") {
+        tracing_pointer = Some(quote::quote! {tracing::error!("This pointer is null");});
+        tracing_out_pointer = Some(quote::quote! {tracing::error!("Out pointer is null");});
+        tracing_skip = Some(quote::quote! {#[tracing::instrument(skip_all)]});
+        tracing_error = Some(quote::quote! {tracing::error!("Error");});
+        tracing_serializable_e = Some(quote::quote! {tracing::error!(%_e, "Serialization error");});
+        tracing_serializable_w = Some(quote::quote! {tracing::warn!(%e, "Serialization error");});
+    } else {
+        allow_unwrap_default = Some(quote::quote! {#[allow(clippy::manual_unwrap_or_default)]});
+    }
+
     let this_ptr = if is_free_standing {
         None
     } else {
         Some(quote::quote_spanned! {item_span=>
             if this_ptr.is_null() {
-                tracing::error!("This pointer is null");
+                #tracing_pointer
                 return Err(color_eyre::eyre::eyre!("This pointer is null").into());
             }
             let this = unsafe { &#mut_this *this_ptr };
@@ -208,7 +229,7 @@ fn generate_exported_function<'a>(
     };
     let out_ptr = quote::quote_spanned! {item_span=>
         if out_ptr.is_null() {
-            tracing::error!("Out pointer is null");
+            #tracing_out_pointer
             return Err(color_eyre::eyre::eyre!("Out pointer is null").into());
         }
     };
@@ -243,8 +264,12 @@ fn generate_exported_function<'a>(
     };
     exports.push(quote::quote_spanned! {item_span=>
         #(#docs)*
+        ///
+        /// # Safety
+        /// Unsafe code is used to check input and output pointers to byte buffers.
         #[cfg(not(generated_extern_function_marker))]
-        #[tracing::instrument(skip_all)]
+        #tracing_skip
+        #allow_unwrap_default
         #[no_mangle]
         pub unsafe extern "C" fn #fn_name(#(#arg_list,)*) -> usize {
             let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
@@ -256,7 +281,7 @@ fn generate_exported_function<'a>(
                     o
                 },
                 Err(e) => {
-                    tracing::error!("Error");
+                    #tracing_error
                     Err(crate::errors::SerializableError::from(e))
                 }
             };
@@ -265,14 +290,14 @@ fn generate_exported_function<'a>(
                     bytes
                 }
                 Err(e) => {
-                    tracing::warn!(%e, "Serialization error");
+                    #tracing_serializable_w
                     res = Err(e.into());
                     match bincode::serialize(&res) {
                         Ok(bytes) => {
                             bytes
                         }
-                        Err(e) => {
-                            tracing::error!(%e, "Serialization error");
+                        Err(_e) => {
+                            #tracing_serializable_e
                             Vec::new()
                         }
                     }
