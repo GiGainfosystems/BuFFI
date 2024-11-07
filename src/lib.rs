@@ -435,11 +435,6 @@ fn generate_function_definitions(
             unreachable!()
         }
     }
-    writeln!(
-        extern_c_header,
-        "extern \"C\" void {function_prefix}_free_byte_buffer(unsigned char* buffer, size_t buffer_size);",
-    )
-        .unwrap();
     for function in extern_c_functions {
         writeln!(extern_c_header, "{function}").unwrap();
     }
