@@ -222,7 +222,7 @@ fn generate_exported_function<'a>(
         Some(quote::quote_spanned! {item_span=>
             if this_ptr.is_null() {
                 #tracing_pointer
-                return Err(color_eyre::eyre::eyre!("This pointer is null").into());
+                return Err(crate::errors::SerializableError::from("This pointer is null".to_string()));
             }
             let this = unsafe { &#mut_this *this_ptr };
         })
@@ -230,7 +230,7 @@ fn generate_exported_function<'a>(
     let out_ptr = quote::quote_spanned! {item_span=>
         if out_ptr.is_null() {
             #tracing_out_pointer
-            return Err(color_eyre::eyre::eyre!("Out pointer is null").into());
+            return Err(crate::errors::SerializableError::from("Out pointer is null".to_string()));
         }
     };
     let deserialize = quote::quote! {
