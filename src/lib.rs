@@ -11,7 +11,7 @@
 //!
 #![doc=include_str!("../README.md")]
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_generate::SourceInstaller;
 use std::borrow::Cow;
 use std::cell::RefCell;
@@ -33,29 +33,50 @@ struct WorkspaceMetadata {
     target_directory: String,
 }
 
-#[derive(Deserialize, Debug)]
+/// A Config object that provides information for the generation of C/C++ code
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
     /// The namespace that should be used in the C++ code (required)
-    namespace: String,
+    pub namespace: String,
     /// The name of the API library that is built (important for Rustdoc, required)
-    api_lib_name: String,
+    pub api_lib_name: String,
     /// The name of your API crate (important for Rustdoc, required)
-    parent_crate: String,
+    pub parent_crate: String,
     /// All crates that include the types you use in your API, needs to at least include your API crate (required)
-    rustdoc_crates: Vec<String>,
+    pub rustdoc_crates: Vec<String>,
     /// In case the file names of the generated C/C++ should have a prefix, put this here
-    file_prefix: Option<String>,
+    pub file_prefix: Option<String>,
     /// Copyright header to be included in every C/C++ file
-    copyright_header: Option<String>,
+    pub copyright_header: Option<String>,
     /// Generated-by header to be included in every C/C++ file
-    generated_by_header: Option<String>,
+    pub generated_by_header: Option<String>,
     /// In case you need to set any feature flags for build process of Rustdoc, add them here
-    crate_feature_flags: Option<Vec<String>>,
+    pub crate_feature_flags: Option<Vec<String>>,
     /// Add some additional rustdoc flags here, can be useful for debugging
-    rustdoc_flags: Option<Vec<String>>,
+    pub rustdoc_flags: Option<Vec<String>>,
 }
 
 impl Config {
+    /// Create a new config object by only setting required fields
+    pub fn new(
+        namespace: String,
+        api_lib_name: String,
+        parent_crate: String,
+        rustdoc_crates: Vec<String>,
+    ) -> Self {
+        Self {
+            namespace,
+            api_lib_name,
+            parent_crate,
+            rustdoc_crates,
+            file_prefix: None,
+            copyright_header: None,
+            generated_by_header: None,
+            crate_feature_flags: None,
+            rustdoc_flags: None,
+        }
+    }
+
     /// Add some additional flags that should be passed when creating the rustdocs
     pub fn extend_rustdoc_flags(&mut self, flags: Vec<String>) {
         if let Some(rustdoc_flags) = self.rustdoc_flags.as_mut() {
