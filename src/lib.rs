@@ -33,7 +33,7 @@ struct WorkspaceMetadata {
     target_directory: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct Config {
     namespace: String,
     api_lib_name: String,
@@ -977,7 +977,6 @@ fn to_serde_reflect_type(
             }) = p.args.as_deref()
             {
                 let ok = &args[0];
-                let err = args.get(1);
                 let ok = if let rustdoc_types::GenericArg::Type(tpe) = ok {
                     to_serde_reflect_type(
                         tpe,
@@ -991,19 +990,10 @@ fn to_serde_reflect_type(
                 } else {
                     unreachable!()
                 };
-                let err = if let Some(rustdoc_types::GenericArg::Type(tpe)) = err {
-                    to_serde_reflect_type(
-                        tpe,
-                        crate_map,
-                        comment_map,
-                        Vec::new(),
-                        parent_crate,
-                        namespace,
-                        type_map,
-                    )
-                } else if let Some((id, _)) = crate_map.doc_types.index.iter().find(|(_, item)| {
-                    item.name.as_deref().map(get_name_without_path) == Some("SerializableError")
-                }) {
+                let err = if let Some((id, _)) =
+                    crate_map.doc_types.index.iter().find(|(_, item)| {
+                        item.name.as_deref().map(get_name_without_path) == Some("SerializableError")
+                    }) {
                     let t = rustdoc_types::Type::ResolvedPath(rustdoc_types::Path {
                         name: "SerializableError".into(),
                         id: id.clone(),
@@ -1019,7 +1009,7 @@ fn to_serde_reflect_type(
                         type_map,
                     )
                 } else {
-                    unreachable!("Expected `SerializableError` but got something different. Is that type renamed?")
+                    unreachable!("Could not find docs for `SerializableError`! Maybe the `errors` module or the type itself is still private?")
                 };
                 (ok, err)
             } else {
