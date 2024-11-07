@@ -35,14 +35,23 @@ struct WorkspaceMetadata {
 
 #[derive(Deserialize, Debug)]
 pub struct Config {
+    /// The namespace that should be used in the C++ code (required)
     namespace: String,
+    /// The name of the API library that is built (important for Rustdoc, required)
     api_lib_name: String,
-    file_prefix: Option<String>,
+    /// The name of your API crate (important for Rustdoc, required)
     parent_crate: String,
-    copyright_header: Option<String>,
-    generated_by_header: Option<String>,
+    /// All crates that include the types you use in your API, needs to at least include your API crate (required)
     rustdoc_crates: Vec<String>,
+    /// In case the file names of the generated C/C++ should have a prefix, put this here
+    file_prefix: Option<String>,
+    /// Copyright header to be included in every C/C++ file
+    copyright_header: Option<String>,
+    /// Generated-by header to be included in every C/C++ file
+    generated_by_header: Option<String>,
+    /// In case you need to set any feature flags for build process of Rustdoc, add them here
     crate_feature_flags: Option<Vec<String>>,
+    /// Add some additional rustdoc flags here, can be useful for debugging
     rustdoc_flags: Option<Vec<String>>,
 }
 

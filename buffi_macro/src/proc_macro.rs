@@ -266,7 +266,8 @@ fn generate_exported_function<'a>(
         #(#docs)*
         ///
         /// # Safety
-        /// Unsafe code is used to check input and output pointers to byte buffers.
+        /// Unsafe code is used to dereference pointers to byte buffers.
+        /// We check every pointer before accessing it to make this process safe.
         #[cfg(not(generated_extern_function_marker))]
         #tracing_skip
         #allow_unwrap_default
