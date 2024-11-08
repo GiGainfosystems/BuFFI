@@ -9,7 +9,7 @@
 //! * types.hpp, containing types for any type used in the generated function signatures
 //! * serde.hpp, bincode.hpp, binary.hpp, containing helper code used for the (de)serialization implementation
 //!
-#![doc=include_str!("../README.md")]
+#![doc=include_str!("../../README.md")]
 
 use serde::{Deserialize, Serialize};
 use serde_generate::SourceInstaller;
