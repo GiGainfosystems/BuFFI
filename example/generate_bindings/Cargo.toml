@@ -1,0 +1,8 @@
+[package]
+name = "generate_bindings"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+toml = "0.8.19"
+buffi = { path = "../.." }
