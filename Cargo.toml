@@ -1,3 +1,6 @@
 [workspace]
 resolver = "2"
 members = ["buffi", "buffi_macro", "example/buffi_example", "example/generate_bindings"]
+
+[workspace.lints.clippy]
+unwrap_used = "warn"

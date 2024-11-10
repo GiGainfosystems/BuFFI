@@ -36,7 +36,6 @@ struct WorkspaceMetadata {
 /// A Config object that provides information for the generation of C/C++ code
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
-
     /// The namespace that should be used in the C++ code (required)
     pub namespace: String,
     /// The name of the API library that is built (important for Rustdoc, required)
