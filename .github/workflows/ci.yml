@@ -1,12 +1,12 @@
 on:
   merge_group:
-    types: [checks_requested]
+    types: [ checks_requested ]
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [ opened, synchronize, reopened ]
 
 name: BuFFI CI
 
-jobs:  
+jobs:
   rustfmt_and_clippy:
     name: Check rustfmt style && run clippy
     runs-on: ubuntu-latest
@@ -24,3 +24,11 @@ jobs:
         run: cargo clippy --workspace
       - name: Run rustfmt
         run: cargo fmt --all --check
+  basic_test:
+    name: Generate and check bindings of the basic example
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.82.0
+      - name: Run test
+        run: cargo test -p tests
