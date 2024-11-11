@@ -1,7 +1,7 @@
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use std::any::Any;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize)]
 pub struct SerializableError {
     pub message: String,
 }
