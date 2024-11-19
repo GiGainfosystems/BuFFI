@@ -1,0 +1,14 @@
+version: 2
+updates:
+  - package-ecosystem: "cargo"
+    directory: "/"
+    allow:
+      dependency-type: "direct"
+    schedule:
+      interval: "monthly"
+    ignore:
+      # we need to manually up that this for rust versions
+      - dependency-name: "rustdoc-types"
+    reviewers:
+      - "weiznich"
+      - "SwishSwushPow"
