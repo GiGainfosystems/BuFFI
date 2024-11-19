@@ -17,6 +17,7 @@ use std::borrow::Cow;
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
+use std::ffi::OsStr;
 use std::fmt::Write as _;
 use std::fs;
 use std::fs::File;
@@ -1307,7 +1308,25 @@ fn extract_crate_from_span(t: &rustdoc_types::Item) -> String {
     let mut components = p.components().peekable();
     let crate_name = match components.next() {
         Some(Component::Normal(el)) => {
-            let s = el.to_str().expect("We expect an UTF-8 Path");
+            // that's a releative path in the project itself
+            // we to walk down from the source files to the actual crate
+            // name
+            // This only works for reasonable default source setups,
+            // such as those that have a src directory and where
+            // the parent directory is named as the crate?
+            // Fixme: It might be useful to use actual metadata from
+            // cargo metadata to make this more robust
+            let mut rev_components = components
+                .rev()
+                // skip everything before src as it's inside the
+                // source directory
+                .skip_while(|el| *el != Component::Normal(OsStr::new("src")))
+                .skip(1); // need to skip "src" itself
+            let Component::Normal(next) = rev_components.next().unwrap_or(Component::Normal(el))
+            else {
+                panic!("Could not resolve source path");
+            };
+            let s = next.to_str().expect("We expect an UTF-8 Path");
             // crate names do not contain `-` but `_`
             s.replace('-', "_")
         }
