@@ -54,7 +54,7 @@ dependencies = [
 
 [[package]]
 name = "buffi"
-version = "0.2.0+rust.1.82.0"
+version = "0.2.1+rust.1.82.0"
 dependencies = [
  "rustdoc-types",
  "serde",

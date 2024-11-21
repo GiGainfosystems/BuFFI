@@ -122,7 +122,7 @@ BuFFI is still in its early stages and there are a couple of things to consider 
 
 ## Deep dive
 
-We hope to link to a presentation here soon that will explain the inner workings of BuFFI.
+We hope to link to a presentation here soon that will explain the inner workings of BuFFI. You can already have a look at the slides [here](knowledge/RustLab2024.pdf).
 
 ## License
 
