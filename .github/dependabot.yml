@@ -7,7 +7,7 @@ updates:
     schedule:
       interval: "monthly"
     ignore:
-      # we need to manually up that this for rust versions
+      # we need to manually update this for rust versions
       - dependency-name: "rustdoc-types"
     reviewers:
       - "weiznich"

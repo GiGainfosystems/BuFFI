@@ -1308,8 +1308,8 @@ fn extract_crate_from_span(t: &rustdoc_types::Item) -> String {
     let mut components = p.components().peekable();
     let crate_name = match components.next() {
         Some(Component::Normal(el)) => {
-            // that's a releative path in the project itself
-            // we to walk down from the source files to the actual crate
+            // that's a relative path in the project itself
+            // we do walk down from the source files to the actual crate
             // name
             // This only works for reasonable default source setups,
             // such as those that have a src directory and where
