@@ -1,15 +1,21 @@
 // Copyright (C) 2024 by GiGa infosystems
 
-//! This code is used to generate the c++ side API bindings for a Rust API
+//! This code is used to generate the C++ side API bindings for a Rust API
 //! based on the rustdoc json output
 //!
-//! It generates the following files:
+//! It generates the following files based on your code:
 //!
-//! * functions.hpp, containing the c++ side function definitions
-//! * types.hpp, containing types for any type used in the generated function signatures
-//! * serde.hpp, bincode.hpp, binary.hpp, containing helper code used for the (de)serialization implementation
+//! * api_functions.hpp (C-API with byte buffers)
+//! * types.hpp (includes all the types, name is dependent on the namespace)
+//! * testclient.hpp (C++ functions belonging to a struct such as `testclient`)
+//! * free_standing_functions.hpp (C++ functions not from an "impl" block)
 //!
-#![doc=include_str!("../../../../README.md")]
+//! And these files to handle serde and bincode:
+//!
+//! * binary.hpp and bincode.hpp (for Bincode)
+//! * serde.hpp (for Serde)
+//!
+#![doc = include_str!(concat!("../", env!("CARGO_PKG_README")))]
 
 use serde::{Deserialize, Serialize};
 use serde_generate::SourceInstaller;

@@ -1,13 +1,14 @@
 [package]
 name = "buffi_macro"
 description = "A proc-macro to generate ergonomic, buffer-based C++ APIs."
-version = "0.2.0"
+version = "0.2.2"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 documentation = "https://docs.rs/buffi_macro"
 repository = "https://github.com/GiGainfosystems/BuFFI/"
 keywords = ["FFI", "API", "C", "bincode", "serde"]
 categories = ["development-tools::ffi"]
+readme = "../README.md"
 
 [dependencies]
 proc-macro2 = "1.0.89"
