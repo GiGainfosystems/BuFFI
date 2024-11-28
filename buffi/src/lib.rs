@@ -137,7 +137,7 @@ impl ItemResolver {
                 .find(|(_, i)| i.path == parts)
                 .expect("It's there");
             if summary.kind == requested_item {
-                id.clone()
+                *id
             } else {
                 panic!(
                     "Incompatible type: Expected {requested_item:?}, Got {:?}",
@@ -179,7 +179,7 @@ impl ItemResolver {
                     .iter()
                     .find(|i| extract_crate_from_span(i) == parent_crate);
                 match matches_parent_crate {
-                    Some(t) if id.0.starts_with('0') => {
+                    Some(t) if id.0 == 0 => {
                         return rustdoc_types::Item::clone(t);
                     }
                     _ => {
@@ -587,7 +587,7 @@ fn generate_function_def(
     config: &Config,
     impl_type: Option<&rustdoc_types::Type>,
 ) {
-    let output_type = if let Some(ref tpe) = m.decl.output {
+    let output_type = if let Some(ref tpe) = m.sig.output {
         let tpe = to_serde_reflect_type(
             tpe,
             res,
@@ -602,7 +602,7 @@ fn generate_function_def(
         unimplemented!()
     };
     let inputs = m
-        .decl
+        .sig
         .inputs
         .iter()
         .map(|(name, tpe)| {
@@ -633,7 +633,7 @@ fn generate_function_def(
             (name, type_string)
         })
         .collect::<Vec<_>>();
-    let return_output_type = match m.decl.output {
+    let return_output_type = match m.sig.output {
         Some(rustdoc_types::Type::ResolvedPath(ref p))
             if get_name_without_path(&p.name) == "Result" =>
         {
@@ -737,7 +737,7 @@ fn generate_function_def(
     )
     .unwrap();
     writeln!(out_functions).unwrap();
-    if matches!(m.decl.output, Some(rustdoc_types::Type::ResolvedPath(ref p)) if get_name_without_path(&p.name) == "Result")
+    if matches!(m.sig.output, Some(rustdoc_types::Type::ResolvedPath(ref p)) if get_name_without_path(&p.name) == "Result")
     {
         writeln!(
             out_functions,
@@ -802,12 +802,12 @@ fn generate_type_definitions(
         })
         .flat_map(|m| {
             if let rustdoc_types::ItemEnum::Function(ref m) = m.inner {
-                m.decl
+                m.sig
                     .inputs
                     .iter()
                     .map(|(_, t)| t.clone())
                     .chain(
-                        m.decl
+                        m.sig
                             .output
                             .as_ref()
                             .map(|e| vec![e.clone()])
@@ -1028,7 +1028,7 @@ fn to_serde_reflect_type(
                     }) {
                     let t = rustdoc_types::Type::ResolvedPath(rustdoc_types::Path {
                         name: "SerializableError".into(),
-                        id: id.clone(),
+                        id: *id,
                         args: None,
                     });
                     to_serde_reflect_type(
@@ -1604,10 +1604,10 @@ fn generate_exported_struct(
                 if let rustdoc_types::ItemEnum::StructField(ref tpe) = s.inner {
                     let parent_args = if let Some(rustdoc_types::GenericArgs::AngleBracketed {
                         args,
-                        bindings,
+                        constraints,
                     }) = p.args.as_deref()
                     {
-                        if args.is_empty() && bindings.is_empty() {
+                        if args.is_empty() && constraints.is_empty() {
                             Vec::new()
                         } else if parent_args.len() == 1
                             && args.len() == 1
@@ -1706,8 +1706,8 @@ fn to_c_type(tpe: &rustdoc_types::Type) -> String {
         rustdoc_types::Type::Array { .. } => unimplemented!(),
         rustdoc_types::Type::ImplTrait(_) => unimplemented!(),
         rustdoc_types::Type::Infer => unimplemented!(),
-        rustdoc_types::Type::RawPointer { mutable, type_ } => {
-            let mut out = if *mutable {
+        rustdoc_types::Type::RawPointer { is_mutable, type_ } => {
+            let mut out = if *is_mutable {
                 String::new()
             } else {
                 String::from("const ")
@@ -1726,7 +1726,7 @@ fn generate_extern_c_function_def(name: &str, func: &rustdoc_types::Function) ->
     write!(
         out,
         "{} ",
-        func.decl
+        func.sig
             .output
             .as_ref()
             .map(to_c_type)
@@ -1735,7 +1735,7 @@ fn generate_extern_c_function_def(name: &str, func: &rustdoc_types::Function) ->
     .unwrap();
 
     let args = func
-        .decl
+        .sig
         .inputs
         .iter()
         .map(|(name, tpe)| {
