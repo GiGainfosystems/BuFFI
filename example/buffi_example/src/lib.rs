@@ -1,5 +1,6 @@
 #![allow(unexpected_cfgs)]
 
+use cgmath::Point1;
 use serde::Serialize;
 use std::sync::Arc;
 use tokio::runtime::Runtime;
@@ -46,6 +47,12 @@ impl TestClient {
             some_content: content,
             itself: None,
         })
+    }
+
+    /// Here we use a type from a third party crate and return `()`
+    pub fn use_foreign_type_and_return_nothing(&self, point: Point1<f64>) -> Result<(), String> {
+        println!("{:?}", point);
+        Ok(())
     }
 }
 
