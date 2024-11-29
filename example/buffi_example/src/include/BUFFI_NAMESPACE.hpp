@@ -102,6 +102,39 @@ namespace BUFFI_NAMESPACE {
         static Result_i64_SerializableError bincodeDeserialize(std::vector<uint8_t>);
     };
 
+    struct Result_void_SerializableError {
+
+        struct Ok {
+            std::tuple<std::tuple<>> value;
+
+            friend bool operator==(const Ok&, const Ok&);
+            std::vector<uint8_t> bincodeSerialize() const;
+            static Ok bincodeDeserialize(std::vector<uint8_t>);
+        };
+
+        struct Err {
+            std::tuple<BUFFI_NAMESPACE::SerializableError> value;
+
+            friend bool operator==(const Err&, const Err&);
+            std::vector<uint8_t> bincodeSerialize() const;
+            static Err bincodeDeserialize(std::vector<uint8_t>);
+        };
+
+        std::variant<Ok, Err> value;
+
+        friend bool operator==(const Result_void_SerializableError&, const Result_void_SerializableError&);
+        std::vector<uint8_t> bincodeSerialize() const;
+        static Result_void_SerializableError bincodeDeserialize(std::vector<uint8_t>);
+    };
+
+    struct Point1_f64 {
+        double x;
+
+        friend bool operator==(const Point1_f64&, const Point1_f64&);
+        std::vector<uint8_t> bincodeSerialize() const;
+        static Point1_f64 bincodeDeserialize(std::vector<uint8_t>);
+    };
+
 } // end of namespace BUFFI_NAMESPACE
 
 
@@ -146,6 +179,48 @@ BUFFI_NAMESPACE::CustomType serde::Deserializable<BUFFI_NAMESPACE::CustomType>::
     BUFFI_NAMESPACE::CustomType obj;
     obj.some_content = serde::Deserializable<decltype(obj.some_content)>::deserialize(deserializer);
     obj.itself = serde::Deserializable<decltype(obj.itself)>::deserialize(deserializer);
+    deserializer.decrease_container_depth();
+    return obj;
+}
+
+namespace BUFFI_NAMESPACE {
+
+    inline bool operator==(const Point1_f64 &lhs, const Point1_f64 &rhs) {
+        if (!(lhs.x == rhs.x)) { return false; }
+        return true;
+    }
+
+    inline std::vector<uint8_t> Point1_f64::bincodeSerialize() const {
+        auto serializer = serde::BincodeSerializer();
+        serde::Serializable<Point1_f64>::serialize(*this, serializer);
+        return std::move(serializer).bytes();
+    }
+
+    inline Point1_f64 Point1_f64::bincodeDeserialize(std::vector<uint8_t> input) {
+        auto deserializer = serde::BincodeDeserializer(input);
+        auto value = serde::Deserializable<Point1_f64>::deserialize(deserializer);
+        if (deserializer.get_buffer_offset() < input.size()) {
+            throw serde::deserialization_error("Some input bytes were not read");
+        }
+        return value;
+    }
+
+} // end of namespace BUFFI_NAMESPACE
+
+template <>
+template <typename Serializer>
+void serde::Serializable<BUFFI_NAMESPACE::Point1_f64>::serialize(const BUFFI_NAMESPACE::Point1_f64 &obj, Serializer &serializer) {
+    serializer.increase_container_depth();
+    serde::Serializable<decltype(obj.x)>::serialize(obj.x, serializer);
+    serializer.decrease_container_depth();
+}
+
+template <>
+template <typename Deserializer>
+BUFFI_NAMESPACE::Point1_f64 serde::Deserializable<BUFFI_NAMESPACE::Point1_f64>::deserialize(Deserializer &deserializer) {
+    deserializer.increase_container_depth();
+    BUFFI_NAMESPACE::Point1_f64 obj;
+    obj.x = serde::Deserializable<decltype(obj.x)>::deserialize(deserializer);
     deserializer.decrease_container_depth();
     return obj;
 }
@@ -500,6 +575,124 @@ template <>
 template <typename Deserializer>
 BUFFI_NAMESPACE::Result_i64_SerializableError::Err serde::Deserializable<BUFFI_NAMESPACE::Result_i64_SerializableError::Err>::deserialize(Deserializer &deserializer) {
     BUFFI_NAMESPACE::Result_i64_SerializableError::Err obj;
+    obj.value = serde::Deserializable<decltype(obj.value)>::deserialize(deserializer);
+    return obj;
+}
+
+namespace BUFFI_NAMESPACE {
+
+    inline bool operator==(const Result_void_SerializableError &lhs, const Result_void_SerializableError &rhs) {
+        if (!(lhs.value == rhs.value)) { return false; }
+        return true;
+    }
+
+    inline std::vector<uint8_t> Result_void_SerializableError::bincodeSerialize() const {
+        auto serializer = serde::BincodeSerializer();
+        serde::Serializable<Result_void_SerializableError>::serialize(*this, serializer);
+        return std::move(serializer).bytes();
+    }
+
+    inline Result_void_SerializableError Result_void_SerializableError::bincodeDeserialize(std::vector<uint8_t> input) {
+        auto deserializer = serde::BincodeDeserializer(input);
+        auto value = serde::Deserializable<Result_void_SerializableError>::deserialize(deserializer);
+        if (deserializer.get_buffer_offset() < input.size()) {
+            throw serde::deserialization_error("Some input bytes were not read");
+        }
+        return value;
+    }
+
+} // end of namespace BUFFI_NAMESPACE
+
+template <>
+template <typename Serializer>
+void serde::Serializable<BUFFI_NAMESPACE::Result_void_SerializableError>::serialize(const BUFFI_NAMESPACE::Result_void_SerializableError &obj, Serializer &serializer) {
+    serializer.increase_container_depth();
+    serde::Serializable<decltype(obj.value)>::serialize(obj.value, serializer);
+    serializer.decrease_container_depth();
+}
+
+template <>
+template <typename Deserializer>
+BUFFI_NAMESPACE::Result_void_SerializableError serde::Deserializable<BUFFI_NAMESPACE::Result_void_SerializableError>::deserialize(Deserializer &deserializer) {
+    deserializer.increase_container_depth();
+    BUFFI_NAMESPACE::Result_void_SerializableError obj;
+    obj.value = serde::Deserializable<decltype(obj.value)>::deserialize(deserializer);
+    deserializer.decrease_container_depth();
+    return obj;
+}
+
+namespace BUFFI_NAMESPACE {
+
+    inline bool operator==(const Result_void_SerializableError::Ok &lhs, const Result_void_SerializableError::Ok &rhs) {
+        if (!(lhs.value == rhs.value)) { return false; }
+        return true;
+    }
+
+    inline std::vector<uint8_t> Result_void_SerializableError::Ok::bincodeSerialize() const {
+        auto serializer = serde::BincodeSerializer();
+        serde::Serializable<Result_void_SerializableError::Ok>::serialize(*this, serializer);
+        return std::move(serializer).bytes();
+    }
+
+    inline Result_void_SerializableError::Ok Result_void_SerializableError::Ok::bincodeDeserialize(std::vector<uint8_t> input) {
+        auto deserializer = serde::BincodeDeserializer(input);
+        auto value = serde::Deserializable<Result_void_SerializableError::Ok>::deserialize(deserializer);
+        if (deserializer.get_buffer_offset() < input.size()) {
+            throw serde::deserialization_error("Some input bytes were not read");
+        }
+        return value;
+    }
+
+} // end of namespace BUFFI_NAMESPACE
+
+template <>
+template <typename Serializer>
+void serde::Serializable<BUFFI_NAMESPACE::Result_void_SerializableError::Ok>::serialize(const BUFFI_NAMESPACE::Result_void_SerializableError::Ok &obj, Serializer &serializer) {
+    serde::Serializable<decltype(obj.value)>::serialize(obj.value, serializer);
+}
+
+template <>
+template <typename Deserializer>
+BUFFI_NAMESPACE::Result_void_SerializableError::Ok serde::Deserializable<BUFFI_NAMESPACE::Result_void_SerializableError::Ok>::deserialize(Deserializer &deserializer) {
+    BUFFI_NAMESPACE::Result_void_SerializableError::Ok obj;
+    obj.value = serde::Deserializable<decltype(obj.value)>::deserialize(deserializer);
+    return obj;
+}
+
+namespace BUFFI_NAMESPACE {
+
+    inline bool operator==(const Result_void_SerializableError::Err &lhs, const Result_void_SerializableError::Err &rhs) {
+        if (!(lhs.value == rhs.value)) { return false; }
+        return true;
+    }
+
+    inline std::vector<uint8_t> Result_void_SerializableError::Err::bincodeSerialize() const {
+        auto serializer = serde::BincodeSerializer();
+        serde::Serializable<Result_void_SerializableError::Err>::serialize(*this, serializer);
+        return std::move(serializer).bytes();
+    }
+
+    inline Result_void_SerializableError::Err Result_void_SerializableError::Err::bincodeDeserialize(std::vector<uint8_t> input) {
+        auto deserializer = serde::BincodeDeserializer(input);
+        auto value = serde::Deserializable<Result_void_SerializableError::Err>::deserialize(deserializer);
+        if (deserializer.get_buffer_offset() < input.size()) {
+            throw serde::deserialization_error("Some input bytes were not read");
+        }
+        return value;
+    }
+
+} // end of namespace BUFFI_NAMESPACE
+
+template <>
+template <typename Serializer>
+void serde::Serializable<BUFFI_NAMESPACE::Result_void_SerializableError::Err>::serialize(const BUFFI_NAMESPACE::Result_void_SerializableError::Err &obj, Serializer &serializer) {
+    serde::Serializable<decltype(obj.value)>::serialize(obj.value, serializer);
+}
+
+template <>
+template <typename Deserializer>
+BUFFI_NAMESPACE::Result_void_SerializableError::Err serde::Deserializable<BUFFI_NAMESPACE::Result_void_SerializableError::Err>::deserialize(Deserializer &deserializer) {
+    BUFFI_NAMESPACE::Result_void_SerializableError::Err obj;
     obj.value = serde::Deserializable<decltype(obj.value)>::deserialize(deserializer);
     return obj;
 }

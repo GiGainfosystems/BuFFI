@@ -62,6 +62,28 @@ public:
         }
     }
 
+    // Here we use a type from a third party crate and return `()`
+    inline void use_foreign_type_and_return_nothing(const Point1_f64& point) {
+        auto serializer_point = serde::BincodeSerializer();
+        serde::Serializable<Point1_f64>::serialize(point, serializer_point);
+        std::vector<uint8_t> point_serialized = std::move(serializer_point).bytes();
+        uint8_t* out_ptr = nullptr;
+
+        size_t res_size = buffi_use_foreign_type_and_return_nothing(this->inner, point_serialized.data(), point_serialized.size(), &out_ptr);
+
+        std::vector<uint8_t> serialized_result(out_ptr, out_ptr + res_size);
+        Result_void_SerializableError out = Result_void_SerializableError::bincodeDeserialize(serialized_result);
+        buffi_free_byte_buffer(out_ptr, res_size);
+
+        if (out.value.index() == 0) { // Ok
+            return;
+        } else { // Err
+            auto err = std::get<1>(out.value);
+            auto error = std::get<0>(err.value);
+            throw error;
+        }
+    }
+
 };
 
 }  // end of namespace BUFFI_NAMESPACE
