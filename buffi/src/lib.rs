@@ -163,6 +163,7 @@ impl ItemResolver {
         let candidates = std::iter::once(&self.doc_types)
             .chain(other_crates.values())
             .filter_map(|c| c.index.get(id))
+            .filter(|i| extract_crate_from_span(i) == parent_crate)
             .collect::<Vec<_>>();
         match &candidates as &[&rustdoc_types::Item] {
             [i] => return rustdoc_types::Item::clone(i),
@@ -177,10 +178,10 @@ impl ItemResolver {
                 //   argument
                 let matches_parent_crate = items
                     .iter()
-                    .find(|i| extract_crate_from_span(i) == parent_crate);
+                    .position(|i| extract_crate_from_span(i) == parent_crate);
                 match matches_parent_crate {
-                    Some(t) if id.0 == 0 => {
-                        return rustdoc_types::Item::clone(t);
+                    Some(t) => {
+                        return rustdoc_types::Item::clone(items[t]);
                     }
                     _ => {
                         panic!("Cannot decide what's the correct candidate")
@@ -209,30 +210,27 @@ impl ItemResolver {
             let other_index = other_crates.entry(crate_name.clone()).or_insert_with(|| {
                 self.load_extern_crate_doc(&crate_name, &format!("(needed for {t:?})"))
             });
-            if let Some(item) = other_index.index.get(id) {
-                return item.clone();
-            } else {
-                // This is just guessing the right item at this point
-                // This likely needs improvements
-                // TODO: Fix this as soon as the generated rustdoc contains the right information
-                // (Check on compiler updates)
-                let name = crate_id.path.last().unwrap();
-                let item = other_index.index.values().find(|i| {
-                    i.name.as_ref() == Some(name)
-                        && matches!(
-                            (&i.inner, &crate_id.kind),
-                            (
-                                rustdoc_types::ItemEnum::Struct(_),
-                                rustdoc_types::ItemKind::Struct
-                            ) | (
-                                rustdoc_types::ItemEnum::Enum(_),
-                                rustdoc_types::ItemKind::Enum
-                            )
+
+            // This is just guessing the right item at this point
+            // This likely needs improvements
+            // TODO: Fix this as soon as the generated rustdoc contains the right information
+            // (Check on compiler updates)
+            let name = crate_id.path.last().unwrap();
+            let item = other_index.index.values().find(|i| {
+                i.name.as_ref() == Some(name)
+                    && matches!(
+                        (&i.inner, &crate_id.kind),
+                        (
+                            rustdoc_types::ItemEnum::Struct(_),
+                            rustdoc_types::ItemKind::Struct
+                        ) | (
+                            rustdoc_types::ItemEnum::Enum(_),
+                            rustdoc_types::ItemKind::Enum
                         )
-                });
-                if let Some(item) = item {
-                    return item.clone();
-                }
+                    )
+            });
+            if let Some(item) = item {
+                return item.clone();
             }
         }
         panic!(
