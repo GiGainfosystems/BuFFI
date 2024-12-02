@@ -8,6 +8,8 @@ The rough concept of this approach is to use byte buffers to handle all data inp
 
 ![](readme_images/schema.png)
 
+If you want to learn more about how BuFFI works, check out the video linked below in [Deep Dive](#deep-dive).
+
 ## Getting started
 
 Before we begin, there is a minimal example in this repository that gives a great overview of what is needed to get started and the results that you can expect. There are a couple of bits that need to be added manually as well as some (naming) restrictions, but we hope to get rid of some of them in the future. Most importantly, your Rust API code itself won't have to adhere to any limitations (as long as you only pass serailizable data and return a Result).
@@ -96,7 +98,7 @@ Make sure to include it somewhere amongst your other API functions. If it is mis
 After your API is prepared, we can move on to generate the C and C++ code. Since the code generation is based on Rustdoc it is not possible to simply put it into a `build.rs` file (otherwise you will end up with an endless loop of Rust compilations). We recommend to have a separate target that handles code generation (again, this is shown in the minimal example in the repo). For example, running an `xtask` could be a great way to integrate it into your project if you use this system already.
 
 Before we can generate some code, we need to setup a [`Config`](https://docs.rs/buffi/latest/buffi/struct.Config.html) object. In our example we read it from a toml file, but it can be created in code as well. It will include all necessary information that needs to be passed on to Rustdoc and the code generation. With such an object and an output path for the C/C++ files, we can simply call
-```
+```Rust
 buffi::generate_bindings(include_dir.as_path(), config);
 ```
 and all necessary files will be generated.
@@ -122,7 +124,11 @@ BuFFI is still in its early stages and there are a couple of things to consider 
 
 ## Deep dive
 
-We hope to link to a presentation here soon that will explain the inner workings of BuFFI. You can already have a look at the slides [here](knowledge/RustLab2024.pdf).
+Check out this presentation from EuroRust where @SwishSwushPow talked about the inner workings of BuFFI.
+
+[![Generating ergonomic C++ APIs using Rustdoc, procedural macros, and Serde - Björn Wieczoreck](https://markdown-videos-api.jorgenkh.no/url?url=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3D0q6OFUovDnQ%26t%3D4s)](https://www.youtube.com/watch?v=0q6OFUovDnQ)
+
+You can also have a look at the slides [here](knowledge/RustLab2024.pdf). They are from a different presentation at RustLab and a bit more polished.
 
 ## License
 
