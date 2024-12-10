@@ -163,7 +163,7 @@ impl ItemResolver {
         let candidates = std::iter::once(&self.doc_types)
             .chain(other_crates.values())
             .filter_map(|c| c.index.get(id))
-            .filter(|i| extract_crate_from_span(i) == parent_crate)
+            .filter(|i| extract_crate_from_span(i) == Some(parent_crate.into()))
             .collect::<Vec<_>>();
         match &candidates as &[&rustdoc_types::Item] {
             [i] => return rustdoc_types::Item::clone(i),
@@ -173,12 +173,11 @@ impl ItemResolver {
             items => {
                 // we might get several candidates. In that case check that:
                 //
-                // * We resolve against the local crate (indicated by '0' in the beginning)
                 // * There is a candidate coming from this crate (indicated by the parent_crate)
                 //   argument
                 let matches_parent_crate = items
                     .iter()
-                    .position(|i| extract_crate_from_span(i) == parent_crate);
+                    .position(|i| extract_crate_from_span(i) == Some(parent_crate.into()));
                 match matches_parent_crate {
                     Some(t) => {
                         return rustdoc_types::Item::clone(items[t]);
@@ -193,11 +192,17 @@ impl ItemResolver {
         // expect possibly multiple matching entries?
         let mut matched_ids = Vec::with_capacity(1);
         if let Some(item) = self.doc_types.paths.get(id) {
-            matched_ids.push(item.clone());
+            let input_name = t.and_then(|t| t.name.split("::").last());
+            if input_name == item.path.last().map(|x| x.as_str()) {
+                matched_ids.push(item.clone());
+            }
         }
         for c in other_crates.values() {
             if let Some(s) = c.paths.get(id) {
-                matched_ids.push(s.clone());
+                let input_name = t.and_then(|t| t.name.split("::").last());
+                if input_name == s.path.last().map(|x| x.as_str()) {
+                    matched_ids.push(s.clone());
+                }
             }
         }
 
@@ -1164,7 +1169,7 @@ fn to_serde_reflect_type(
         }
         rustdoc_types::Type::ResolvedPath(p) => {
             let t = crate_map.resolve_index(Some(p), &p.id, parent_crate);
-            let parent_crate = extract_crate_from_span(&t);
+            let parent_crate = extract_crate_from_span(&t).expect("parent crate is set");
             if let Some(comment_map) = comment_map {
                 if let Some(ref doc) = t.docs {
                     comment_map.insert(vec![namespace.to_owned(), p.name.clone()], doc.clone());
@@ -1307,8 +1312,8 @@ fn to_serde_reflect_type(
     r
 }
 
-fn extract_crate_from_span(t: &rustdoc_types::Item) -> String {
-    let p = &t.span.as_ref().expect("Span is set").filename;
+fn extract_crate_from_span(t: &rustdoc_types::Item) -> Option<String> {
+    let p = &t.span.as_ref()?.filename;
     let mut components = p.components().peekable();
     let crate_name = match components.next() {
         Some(Component::Normal(el)) => {
@@ -1372,7 +1377,7 @@ fn extract_crate_from_span(t: &rustdoc_types::Item) -> String {
         }
         _ => panic!("We expect a relative or absolute path here"),
     };
-    crate_name
+    Some(crate_name)
 }
 
 // we can't simply replace `parent_crate` and `namespace` by `config` because this function will
