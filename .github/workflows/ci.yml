@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.84.0
+      - uses: dtolnay/rust-toolchain@1.85.0
         with:
           components: clippy, rustfmt
       - name: Set environment variables
@@ -29,6 +29,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.84.0
+      - uses: dtolnay/rust-toolchain@1.85.0
       - name: Run test
         run: cargo test -p tests

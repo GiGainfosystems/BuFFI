@@ -2,7 +2,7 @@
 name = "buffi_macro"
 description = "A proc-macro to generate ergonomic, buffer-based C++ APIs."
 version = "0.2.5"
-edition = "2021"
+edition = "2024"
 license = "MIT OR Apache-2.0"
 documentation = "https://docs.rs/buffi_macro"
 repository = "https://github.com/GiGainfosystems/BuFFI/"

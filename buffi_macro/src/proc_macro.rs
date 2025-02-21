@@ -271,7 +271,7 @@ fn generate_exported_function<'a>(
         #[cfg(not(generated_extern_function_marker))]
         #tracing_skip
         #allow_unwrap_default
-        #[no_mangle]
+        #[unsafe(no_mangle)]
         pub unsafe extern "C" fn #fn_name(#(#arg_list,)*) -> usize {
             let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                 #inner_block
