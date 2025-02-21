@@ -699,7 +699,11 @@ fn generate_function_def(
             "        serde::Serializable<{tpe}>::serialize({name}, serializer_{name});"
         )
         .unwrap();
-        writeln!(out_functions, "        std::vector<uint8_t> {name}_serialized = std::move(serializer_{name}).bytes();").unwrap();
+        writeln!(
+            out_functions,
+            "        std::vector<uint8_t> {name}_serialized = std::move(serializer_{name}).bytes();"
+        )
+        .unwrap();
     }
     writeln!(out_functions, "        uint8_t* out_ptr = nullptr;").unwrap();
     writeln!(out_functions).unwrap();
@@ -1044,7 +1048,9 @@ fn to_serde_reflect_type(
                         type_map,
                     )
                 } else {
-                    unreachable!("Could not find docs for `SerializableError`! Maybe the `errors` module or the type itself is still private?")
+                    unreachable!(
+                        "Could not find docs for `SerializableError`! Maybe the `errors` module or the type itself is still private?"
+                    )
                 };
                 (ok, err)
             } else {
@@ -1055,22 +1061,18 @@ fn to_serde_reflect_type(
                 0,
                 serde_reflection::Named {
                     name: "Ok".into(),
-                    value: serde_reflection::VariantFormat::Tuple(vec![ok
-                        .last()
-                        .unwrap()
-                        .0
-                        .clone()]),
+                    value: serde_reflection::VariantFormat::Tuple(vec![
+                        ok.last().unwrap().0.clone(),
+                    ]),
                 },
             );
             result_enum.insert(
                 1,
                 serde_reflection::Named {
                     name: "Err".into(),
-                    value: serde_reflection::VariantFormat::Tuple(vec![error
-                        .last()
-                        .unwrap()
-                        .0
-                        .clone()]),
+                    value: serde_reflection::VariantFormat::Tuple(vec![
+                        error.last().unwrap().0.clone(),
+                    ]),
                 },
             );
             let ok_name = to_type_name(&ok.last().unwrap().0);
@@ -1351,7 +1353,7 @@ fn extract_crate_from_span(t: &rustdoc_types::Item) -> Option<String> {
                         if (e == ".cargo" || e == "cargo")
                             && matches!(components.peek(), Some(Component::Normal(e)) if *e == "registry") =>
                     {
-                        break
+                        break;
                     }
                     None => panic!("Unexpected end of path: {}", p.display()),
                     _ => {}
