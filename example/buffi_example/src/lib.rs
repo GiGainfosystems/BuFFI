@@ -17,7 +17,7 @@ pub fn free_standing_function(input: i64) -> Result<i64, String> {
 }
 
 /// Get a client to call functions
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn get_test_client() -> *mut TestClient {
     let client = TestClient {
         runtime: Arc::new(Runtime::new().unwrap()),
@@ -65,7 +65,7 @@ impl TestClient {
 ///
 /// Calling this function outside a destructor is highly unsafe
 /// and result in a use-after-free
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn buffi_free_byte_buffer(ptr: *mut u8, size: usize) {
     if !ptr.is_null() {
         // SAFETY: We checked for null above

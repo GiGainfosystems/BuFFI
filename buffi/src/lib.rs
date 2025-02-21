@@ -456,7 +456,7 @@ fn generate_function_definitions(
 
     // ensure that we always order the type definitions in the same way
     relevant_impls.sort_by_key(|(t, _)| {
-        if let rustdoc_types::Type::ResolvedPath(ref p) = t {
+        if let rustdoc_types::Type::ResolvedPath(p) = t {
             get_name_without_path(&p.name)
         } else {
             unreachable!()
@@ -940,7 +940,7 @@ fn to_serde_reflect_type(
 
     /// This is here for DRY (used by primitives and arrays.)
     fn reflect_primitive(p: &rustdoc_types::Type) -> Vec<(Format, Option<ContainerFormat>)> {
-        let rustdoc_types::Type::Primitive(ref p) = p else {
+        let rustdoc_types::Type::Primitive(p) = p else {
             unreachable!("Primitive!")
         };
         match p.as_ref() {
@@ -1238,7 +1238,7 @@ fn to_serde_reflect_type(
         rustdoc_types::Type::DynTrait(_) => unimplemented!(),
         rustdoc_types::Type::Generic(p) => {
             if parent_args.len() == 1 {
-                if let rustdoc_types::GenericArg::Type(ref t) = &parent_args[0] {
+                if let rustdoc_types::GenericArg::Type(t) = &parent_args[0] {
                     to_serde_reflect_type(
                         t,
                         crate_map,
@@ -1567,7 +1567,7 @@ fn generate_exported_struct(
     let mut name = get_name_without_path(&p.name).to_owned();
     if let Some(rustdoc_types::GenericArgs::AngleBracketed { args, .. }) = p.args.as_deref() {
         for arg in args {
-            if let rustdoc_types::GenericArg::Type(ref t) = arg {
+            if let rustdoc_types::GenericArg::Type(t) = arg {
                 let tpe = to_serde_reflect_type(
                     t,
                     crate_map,
@@ -1592,7 +1592,7 @@ fn generate_exported_struct(
             .iter()
             .map(|id| crate_map.resolve_index(None, id, parent_crate))
             .filter_map(|s| {
-                if let Some(ref mut comment_map) = comment_map {
+                if let Some(comment_map) = comment_map {
                     if let Some(ref doc) = s.docs {
                         comment_map.insert(
                             vec![

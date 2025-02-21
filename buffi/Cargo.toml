@@ -1,8 +1,8 @@
 [package]
 name = "buffi"
 description = "A tool to generate ergonomic, buffer-based C++ APIs."
-version = "0.2.5+rust.1.84.0"
-edition = "2021"
+version = "0.2.6+rust.1.85.0"
+edition = "2024"
 license = "MIT OR Apache-2.0"
 documentation = "https://docs.rs/buffi"
 repository = "https://github.com/GiGainfosystems/BuFFI"
