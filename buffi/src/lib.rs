@@ -146,7 +146,7 @@ impl ItemResolver {
             }
         };
         rustdoc_types::Path {
-            name: parts[parts.len() - 1].to_owned(),
+            path: parts[parts.len() - 1].to_owned(),
             id,
             args: None,
         }
@@ -192,14 +192,14 @@ impl ItemResolver {
         // expect possibly multiple matching entries?
         let mut matched_ids = Vec::with_capacity(1);
         if let Some(item) = self.doc_types.paths.get(id) {
-            let input_name = t.and_then(|t| t.name.split("::").last());
+            let input_name = t.and_then(|t| t.path.split("::").last());
             if input_name == item.path.last().map(|x| x.as_str()) {
                 matched_ids.push(item.clone());
             }
         }
         for c in other_crates.values() {
             if let Some(s) = c.paths.get(id) {
-                let input_name = t.and_then(|t| t.name.split("::").last());
+                let input_name = t.and_then(|t| t.path.split("::").last());
                 if input_name == s.path.last().map(|x| x.as_str()) {
                     matched_ids.push(s.clone());
                 }
@@ -457,7 +457,7 @@ fn generate_function_definitions(
     // ensure that we always order the type definitions in the same way
     relevant_impls.sort_by_key(|(t, _)| {
         if let rustdoc_types::Type::ResolvedPath(p) = t {
-            get_name_without_path(&p.name)
+            get_name_without_path(&p.path)
         } else {
             unreachable!()
         }
@@ -469,7 +469,7 @@ fn generate_function_definitions(
     writeln!(extern_c_header).unwrap();
     for (t, _) in relevant_impls.iter() {
         if let rustdoc_types::Type::ResolvedPath(p) = t {
-            let name = get_name_without_path(&p.name);
+            let name = get_name_without_path(&p.path);
             writeln!(extern_c_header, "struct {};\n", name).unwrap();
         } else {
             unreachable!()
@@ -482,7 +482,7 @@ fn generate_function_definitions(
 
     for (t, impls) in relevant_impls {
         if let rustdoc_types::Type::ResolvedPath(p) = t {
-            let name = get_name_without_path(&p.name);
+            let name = get_name_without_path(&p.path);
             let type_header =
                 out_dir.join(format!("{file_prefix}_{}.hpp", name.to_ascii_lowercase()));
             let mut writer = BufWriter::new(File::create(type_header).unwrap());
@@ -618,7 +618,7 @@ fn generate_function_def(
                         path
                     })
                     .expect("we have an impl type for impl functions");
-                return (name, get_name_without_path(&impl_type_path.name).to_owned());
+                return (name, get_name_without_path(&impl_type_path.path).to_owned());
             }
             let reflect_type = to_serde_reflect_type(
                 tpe,
@@ -638,7 +638,7 @@ fn generate_function_def(
         .collect::<Vec<_>>();
     let return_output_type = match m.sig.output {
         Some(rustdoc_types::Type::ResolvedPath(ref p))
-            if get_name_without_path(&p.name) == "Result" =>
+            if get_name_without_path(&p.path) == "Result" =>
         {
             if let Some(rustdoc_types::GenericArgs::AngleBracketed { args, .. }) = p.args.as_deref()
             {
@@ -661,7 +661,7 @@ fn generate_function_def(
             }
         }
         Some(rustdoc_types::Type::ResolvedPath(ref p))
-            if get_name_without_path(&p.name) == "String" =>
+            if get_name_without_path(&p.path) == "String" =>
         {
             Cow::Owned(to_cpp_type_name(&serde_reflection::Format::Str))
         }
@@ -744,7 +744,7 @@ fn generate_function_def(
     )
     .unwrap();
     writeln!(out_functions).unwrap();
-    if matches!(m.sig.output, Some(rustdoc_types::Type::ResolvedPath(ref p)) if get_name_without_path(&p.name) == "Result")
+    if matches!(m.sig.output, Some(rustdoc_types::Type::ResolvedPath(ref p)) if get_name_without_path(&p.path) == "Result")
     {
         writeln!(
             out_functions,
@@ -1009,7 +1009,7 @@ fn to_serde_reflect_type(
     };
 
     let r = match t {
-        rustdoc_types::Type::ResolvedPath(p) if get_name_without_path(&p.name) == "Result" => {
+        rustdoc_types::Type::ResolvedPath(p) if get_name_without_path(&p.path) == "Result" => {
             let mut out = Vec::new();
             let (ok, error) = if let Some(rustdoc_types::GenericArgs::AngleBracketed {
                 args, ..
@@ -1034,7 +1034,7 @@ fn to_serde_reflect_type(
                         item.name.as_deref().map(get_name_without_path) == Some("SerializableError")
                     }) {
                     let t = rustdoc_types::Type::ResolvedPath(rustdoc_types::Path {
-                        name: "SerializableError".into(),
+                        path: "SerializableError".into(),
                         id: *id,
                         args: None,
                     });
@@ -1087,10 +1087,10 @@ fn to_serde_reflect_type(
 
             out
         }
-        rustdoc_types::Type::ResolvedPath(p) if get_name_without_path(&p.name) == "String" => {
+        rustdoc_types::Type::ResolvedPath(p) if get_name_without_path(&p.path) == "String" => {
             vec![(Format::Str, None)]
         }
-        rustdoc_types::Type::ResolvedPath(p) if get_name_without_path(&p.name) == "Vec" => {
+        rustdoc_types::Type::ResolvedPath(p) if get_name_without_path(&p.path) == "Vec" => {
             if let Some(rustdoc_types::GenericArgs::AngleBracketed { args, .. }) = p.args.as_deref()
             {
                 if let rustdoc_types::GenericArg::Type(tpe) = &args[0] {
@@ -1113,7 +1113,7 @@ fn to_serde_reflect_type(
                 unreachable!()
             }
         }
-        rustdoc_types::Type::ResolvedPath(p) if get_name_without_path(&p.name) == "Option" => {
+        rustdoc_types::Type::ResolvedPath(p) if get_name_without_path(&p.path) == "Option" => {
             if let Some(rustdoc_types::GenericArgs::AngleBracketed { args, .. }) = p.args.as_deref()
             {
                 if let rustdoc_types::GenericArg::Type(tpe) = &args[0] {
@@ -1136,7 +1136,7 @@ fn to_serde_reflect_type(
                 unreachable!()
             }
         }
-        rustdoc_types::Type::ResolvedPath(p) if get_name_without_path(&p.name) == "Box" => {
+        rustdoc_types::Type::ResolvedPath(p) if get_name_without_path(&p.path) == "Box" => {
             let t = match p.args.as_deref() {
                 Some(rustdoc_types::GenericArgs::AngleBracketed { args, .. })
                     if args.len() == 1 =>
@@ -1151,7 +1151,7 @@ fn to_serde_reflect_type(
             };
             if recursive_type {
                 let name = match t {
-                    rustdoc_types::Type::ResolvedPath(p) => get_name_without_path(&p.name),
+                    rustdoc_types::Type::ResolvedPath(p) => get_name_without_path(&p.path),
                     _ => unreachable!(),
                 };
                 // we need an explicit early return here as we **don't** want to
@@ -1174,7 +1174,7 @@ fn to_serde_reflect_type(
             let parent_crate = extract_crate_from_span(&t).expect("parent crate is set");
             if let Some(comment_map) = comment_map {
                 if let Some(ref doc) = t.docs {
-                    comment_map.insert(vec![namespace.to_owned(), p.name.clone()], doc.clone());
+                    comment_map.insert(vec![namespace.to_owned(), p.path.clone()], doc.clone());
                 }
             }
             if let rustdoc_types::ItemEnum::Struct(rustdoc_types::Struct {
@@ -1195,7 +1195,7 @@ fn to_serde_reflect_type(
                 );
             }
             if let rustdoc_types::ItemEnum::Struct(rustdoc_types::Struct {
-                kind: rustdoc_types::StructKind::Unit {},
+                kind: rustdoc_types::StructKind::Unit,
                 ..
             }) = t.inner
             {
@@ -1414,7 +1414,7 @@ fn generate_exported_enum(
                     comment_map.insert(
                         vec![
                             namespace.to_owned(),
-                            p.name.clone(),
+                            p.path.clone(),
                             v.name.clone().unwrap(),
                         ],
                         docs.clone(),
@@ -1543,7 +1543,7 @@ fn generate_exported_enum(
         }
         Some(ContainerFormat::Enum(enum_def))
     };
-    let name = get_name_without_path(&p.name);
+    let name = get_name_without_path(&p.path);
     out.push((Format::TypeName(name.to_owned()), container_format));
     out
 }
@@ -1566,7 +1566,7 @@ fn generate_exported_struct(
     use serde_reflection::{ContainerFormat, Format};
 
     let mut out = Vec::new();
-    let mut name = get_name_without_path(&p.name).to_owned();
+    let mut name = get_name_without_path(&p.path).to_owned();
     if let Some(rustdoc_types::GenericArgs::AngleBracketed { args, .. }) = p.args.as_deref() {
         for arg in args {
             if let rustdoc_types::GenericArg::Type(t) = arg {
@@ -1599,7 +1599,7 @@ fn generate_exported_struct(
                         comment_map.insert(
                             vec![
                                 namespace.to_owned(),
-                                p.name.clone(),
+                                p.path.clone(),
                                 s.name.clone().unwrap(),
                             ],
                             doc.clone(),
@@ -1683,7 +1683,7 @@ fn is_free_standing_impl(item: &&rustdoc_types::Item) -> bool {
 fn to_c_type(tpe: &rustdoc_types::Type) -> String {
     match tpe {
         rustdoc_types::Type::ResolvedPath(p) => {
-            let mut ret = get_name_without_path(&p.name).trim().to_string();
+            let mut ret = get_name_without_path(&p.path).trim().to_string();
             if ret == "c_char" {
                 String::from("char")
             } else {
