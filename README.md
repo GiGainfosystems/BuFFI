@@ -1,6 +1,6 @@
 # BuFFI
 
-BuFFI is a tool that allows users to generate a C++ FFI based on Rust functions or impl blocks that are annotated with it. It consists of a proc macro (called `exported`, available via `buffi_macro`) and a function `generate_bindings` to generate C/C++ code available via this crate. The proc macro needs to be attached to every function or impl block that contains your Rust API functionality and `generate_bindings` can be used as part of a tool, a build step, or a CI job to generate the C and C++ files.
+BuFFI is a tool that allows users to generate a C++ FFI based on Rust functions or impl blocks that are annotated with it. It consists of a proc macro (called `exported`, part of `buffi_macro`) and a function `generate_bindings` to generate C/C++ code available via this crate. The proc macro needs to be attached to every function or impl block that contains your Rust API functionality and `generate_bindings` can be used as part of a tool, a build step, or a CI job to generate the C and C++ files. Note that you only need to add `buffi` to your project and the macro will be made available to you as well.
 
 ## Concept
 
@@ -12,14 +12,14 @@ If you want to learn more about how BuFFI works, check out the video linked belo
 
 ## Getting started
 
-Before we begin, there is a minimal example in this repository that gives a great overview of what is needed to get started and the results that you can expect. There are a couple of bits that need to be added manually as well as some (naming) restrictions, but we hope to get rid of some of them in the future. Most importantly, your Rust API code itself won't have to adhere to any limitations (as long as you only pass serailizable data and return a Result).
+Before we begin, there is a minimal example in this repository that gives a great overview of what is needed to get started and the results that you can expect. There are a couple of bits that need to be added manually as well as some (naming) restrictions, but we hope to get rid of some of them in the future. Most importantly, your Rust API code itself won't have to adhere to any limitations (as long as you only pass serializable data and return a Result).
 
 ### Preparing your API
 
-To get started, you will want to include the `buffi_macro` crate in your API crate and annotate every function or impl block with a `buffi_macro::exported`. The simplest approach would look like this:
+To get started, you will want to include the `buffi` crate in your API crate and annotate every function or impl block with a `buffi::exported`. The simplest approach would look like this:
 
 ```Rust
-#[buffi_macro::exported]
+#[buffi::exported]
 pub fn free_standing_function(input: i64) -> Result<i64, String> {
     Ok(input)
 }
@@ -57,16 +57,16 @@ impl From<Box<dyn Any + Send>> for SerializableError {
     }
 }
 
-impl From<bincode::error::DecodeError> for SerializableError {
-    fn from(value: bincode::error::DecodeError) -> Self {
+impl From<buffi::bincode::error::DecodeError> for SerializableError {
+    fn from(value: buffi::bincode::error::DecodeError) -> Self {
         Self {
             message: format!("Bincode Decode Error: {value}"),
         }
     }
 }
 
-impl From<bincode::error::EncodeError> for SerializableError {
-    fn from(value: bincode::error::EncodeError) -> Self {
+impl From<buffi::bincode::error::EncodeError> for SerializableError {
+    fn from(value: buffi::bincode::error::EncodeError) -> Self {
         Self {
             message: format!("Bincode Encode Error: {value}"),
         }
@@ -75,7 +75,7 @@ impl From<bincode::error::EncodeError> for SerializableError {
 
 ```
 
-Note that the module, the error itself, and the fields on the error need to be public. If that is not the case, you should receive an error during code generation that points you to this issue. You will have to add [Serde](https://crates.io/crates/serde) and [Bincode 2](https://crates.io/crates/bincode) to your crate for this to work.
+Note that the module, the error itself, and the fields on the error need to be public. If that is not the case, you should receive an error during code generation that points you to this issue. You will have to add [Serde](https://crates.io/crates/serde) to your crate for this to work. The right version of `bincode` will be provided by `buffi` and is re-exported as `buffi::bincode`.
 
 Furthermore, to release any memory allocated by the Rust side of your API, you will have to include a function for the C++ side to release memory. This function looks like this:
 
@@ -129,7 +129,7 @@ To get started on the C++ side, you need to include only the latter two files.
 BuFFI is still in its early stages and there are a couple of things to consider when you think about using this crate.
 
 * **Applicability**: At GiGa infosystems we use BuFFI in our day-to-day work and have deployed this FFI in production, and so far, it works exceptionally well. This does not mean that every other use case is fully supported by this already. We make heavy use of `rustdoc-types` and resolving and mapping every type that will be part of an API is a tough job. We expect things to break eventually when other developers will attempt to integrate BuFFI in their projects. We strongly encourage everyone who could benefit from BuFFI to give it a go and open an issue if anything should break. Many issues can be resolved quickly.
-* **Rust Toolchain and Stability**: As mentioned before, BuFFI makes use of Rustdoc's unstable JSON output and `rustdoc-types`. This means that, at the moment, we rely on `RUSTC_BOOTSTRAP` to access nightly functionality in stable compilers. Additionally the JSON format `rustdoc-types` are tightly connected to a released Rust toolchain. Whenever a new stable toolchain is released, there is a good chance the JSON format and `rustdoc-types` will have changed as well. This means that every version of BuFFI will be guaranteed to work with one version of the Rust toolchain (as indicated by the Rust Version in the BuFFI version). We have plans to adjust this in the future via [Trustfall](https://crates.io/crates/trustfall_rustdoc), but for now we will make sure BuFFI will always work with the latest **stable** Rust toolchain. If your crate follows this release cycle as well, you should be golden. If not, make sure to pick the right BuFFI version for you and fix the Rust toolchain in your `rust-toolchain` file.
+* **Rust Toolchain and Stability**: As mentioned before, BuFFI makes use of Rustdoc's unstable JSON output and `rustdoc-types`. This means that, at the moment, we rely on `RUSTC_BOOTSTRAP` to access nightly functionality in stable compilers. Additionally, the JSON format and `rustdoc-types` are tightly connected to a released Rust toolchain. Whenever a new stable toolchain is released, there is a good chance the JSON format and `rustdoc-types` will have changed as well. This means that every version of BuFFI will be guaranteed to work with one version of the Rust toolchain (as indicated by the Rust Version in the BuFFI version). We have plans to adjust this in the future via [Trustfall](https://crates.io/crates/trustfall_rustdoc), but for now we will make sure BuFFI will always work with the latest **stable** Rust toolchain. If your crate follows this release cycle as well, you should be golden. If not, make sure to pick the right BuFFI version for you and fix the Rust toolchain in your `rust-toolchain` file.
 
 ## Deep dive
 

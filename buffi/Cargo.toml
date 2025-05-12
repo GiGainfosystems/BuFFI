@@ -10,9 +10,19 @@ keywords = ["FFI", "API", "C", "bincode", "serde"]
 categories = ["development-tools::ffi"]
 readme = "../README.md"
 
+[dependencies.buffi_macro]
+version = "=0.3.0"
+path = "../buffi_macro"
+
 [dependencies]
 serde = { version = "1.0.213", features = ["derive"] }
 serde_json = "1.0.132"
 serde-generate = { version = "0.26.0", default-features = false, features = ["cpp"] }
 serde-reflection = "0.4.0"
 rustdoc-types = "0.39.0"
+bincode = { version = "2.0.1", features = ["std", "serde"], default-features = false }
+
+[features]
+with_c_api = ["buffi_macro/with_c_api"]
+with_tracing = ["buffi_macro/with_tracing"]
+default = ["with_c_api"]
