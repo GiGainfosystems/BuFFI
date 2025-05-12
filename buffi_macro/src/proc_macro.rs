@@ -146,7 +146,7 @@ fn generate_exported_function<'a>(
                         std::slice::from_raw_parts(#n, #n_size)
                     }
                 };
-                let #n = bincode::serde::decode_from_slice(slice, bincode::config::legacy())?.0;
+                let #n = buffi::bincode::serde::decode_from_slice(slice, buffi::bincode::config::legacy())?.0;
             })
         } else {
             None
@@ -286,14 +286,14 @@ fn generate_exported_function<'a>(
                     Err(crate::errors::SerializableError::from(e))
                 }
             };
-            let bytes = match bincode::serde::encode_to_vec(&res, bincode::config::legacy()) {
+            let bytes = match buffi::bincode::serde::encode_to_vec(&res, buffi::bincode::config::legacy()) {
                 Ok(bytes) => {
                     bytes
                 }
                 Err(e) => {
                     #tracing_serializable_w
                     res = Err(e.into());
-                    match bincode::serde::encode_to_vec(&res, bincode::config::legacy()) {
+                    match buffi::bincode::serde::encode_to_vec(&res, buffi::bincode::config::legacy()) {
                         Ok(bytes) => {
                             bytes
                         }

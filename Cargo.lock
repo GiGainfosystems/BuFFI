@@ -72,6 +72,8 @@ dependencies = [
 name = "buffi"
 version = "0.3.0+rust.1.86.0"
 dependencies = [
+ "bincode",
+ "buffi_macro",
  "rustdoc-types",
  "serde",
  "serde-generate",
@@ -83,8 +85,7 @@ dependencies = [
 name = "buffi_example"
 version = "0.1.0"
 dependencies = [
- "bincode",
- "buffi_macro",
+ "buffi",
  "cgmath",
  "serde",
  "tokio",

@@ -11,7 +11,7 @@ pub struct TestClient {
 }
 
 /// A function that is not part of an impl block
-#[buffi_macro::exported]
+#[buffi::exported]
 pub fn free_standing_function(input: i64) -> Result<i64, String> {
     Ok(input)
 }
@@ -34,7 +34,7 @@ pub struct CustomType {
     pub itself: Option<Box<CustomType>>,
 }
 
-#[buffi_macro::exported]
+#[buffi::exported]
 impl TestClient {
     /// A function that might use context provided by a TestClient to do its thing
     pub fn client_function(&self, input: String) -> Result<String, String> {

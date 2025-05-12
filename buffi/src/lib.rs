@@ -33,6 +33,9 @@ use std::path::PathBuf;
 use std::path::{Component, Path};
 use std::process::{Output, Stdio};
 
+pub use bincode;
+pub use buffi_macro::*;
+
 const FUNCTION_PREFIX: &str = "buffi";
 
 #[derive(Debug, serde::Deserialize)]
