@@ -24,10 +24,18 @@ impl From<Box<dyn Any + Send>> for SerializableError {
     }
 }
 
-impl From<Box<bincode::ErrorKind>> for SerializableError {
-    fn from(value: Box<bincode::ErrorKind>) -> Self {
+impl From<bincode::error::DecodeError> for SerializableError {
+    fn from(value: bincode::error::DecodeError) -> Self {
         Self {
-            message: format!("Bincode: {value}"),
+            message: format!("Bincode Decode Error: {value}"),
+        }
+    }
+}
+
+impl From<bincode::error::EncodeError> for SerializableError {
+    fn from(value: bincode::error::EncodeError) -> Self {
+        Self {
+            message: format!("Bincode Encode Error: {value}"),
         }
     }
 }

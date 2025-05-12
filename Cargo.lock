@@ -49,11 +49,12 @@ dependencies = [
 
 [[package]]
 name = "bincode"
-version = "1.3.3"
+version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b1f45e9417d87227c7a56d22e471c6206462cba514c7590c09aff4cf6d1ddcad"
+checksum = "36eaf5d7b090263e8150820482d5d93cd964a81e4019913c972f4edcc6edb740"
 dependencies = [
  "serde",
+ "unty",
 ]
 
 [[package]]
@@ -69,7 +70,7 @@ dependencies = [
 
 [[package]]
 name = "buffi"
-version = "0.2.7+rust.1.86.0"
+version = "0.3.0+rust.1.86.0"
 dependencies = [
  "rustdoc-types",
  "serde",
@@ -91,7 +92,7 @@ dependencies = [
 
 [[package]]
 name = "buffi_macro"
-version = "0.2.7"
+version = "0.3.0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -481,6 +482,12 @@ name = "unicode-width"
 version = "0.1.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7dd6e30e90baa6f72411720665d41d89b9a3d039dc45b8faea1ddd07f617f6af"
+
+[[package]]
+name = "unty"
+version = "0.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6d49784317cd0d1ee7ec5c716dd598ec5b4483ea832a2dced265471cc0f690ae"
 
 [[package]]
 name = "windows-sys"
