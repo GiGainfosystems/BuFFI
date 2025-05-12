@@ -57,16 +57,25 @@ impl From<Box<dyn Any + Send>> for SerializableError {
     }
 }
 
-impl From<Box<bincode::ErrorKind>> for SerializableError {
-    fn from(value: Box<bincode::ErrorKind>) -> Self {
+impl From<bincode::error::DecodeError> for SerializableError {
+    fn from(value: bincode::error::DecodeError) -> Self {
         Self {
-            message: format!("Bincode: {value}"),
+            message: format!("Bincode Decode Error: {value}"),
         }
     }
 }
+
+impl From<bincode::error::EncodeError> for SerializableError {
+    fn from(value: bincode::error::EncodeError) -> Self {
+        Self {
+            message: format!("Bincode Encode Error: {value}"),
+        }
+    }
+}
+
 ```
 
-Note that the module, the error itself, and the fields on the error need to be public. If that is not the case, you should receive an error during code generation that points you to this issue. You will have to add [Serde](https://crates.io/crates/serde) and [Bincode](https://crates.io/crates/bincode) to your crate for this to work.
+Note that the module, the error itself, and the fields on the error need to be public. If that is not the case, you should receive an error during code generation that points you to this issue. You will have to add [Serde](https://crates.io/crates/serde) and [Bincode 2](https://crates.io/crates/bincode) to your crate for this to work.
 
 Furthermore, to release any memory allocated by the Rust side of your API, you will have to include a function for the C++ side to release memory. This function looks like this:
 
