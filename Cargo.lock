@@ -80,7 +80,7 @@ dependencies = [
 
 [[package]]
 name = "buffi"
-version = "0.2.7+rust.1.86.0"
+version = "0.3.0+rust.1.86.0"
 dependencies = [
  "rustdoc-types",
  "serde",
@@ -102,7 +102,7 @@ dependencies = [
 
 [[package]]
 name = "buffi_macro"
-version = "0.2.7"
+version = "0.3.0"
 dependencies = [
  "proc-macro2",
  "quote",
