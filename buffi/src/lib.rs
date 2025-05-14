@@ -37,6 +37,7 @@ pub use bincode;
 pub use buffi_macro::*;
 
 const FUNCTION_PREFIX: &str = "buffi";
+const MARKER_TRAIT_JSON: &str = "#[<cfg>(not(generated_extern_impl))]";
 
 #[derive(Debug, serde::Deserialize)]
 struct WorkspaceMetadata {
@@ -1664,20 +1665,14 @@ fn generate_exported_struct(
 }
 
 fn is_relevant_impl(item: &&rustdoc_types::Item) -> bool {
-    if !item
-        .attrs
-        .contains(&String::from("#[cfg(not(generated_extern_impl))]"))
-    {
+    if !item.attrs.contains(&String::from(MARKER_TRAIT_JSON)) {
         return false;
     }
     matches!(item.inner, rustdoc_types::ItemEnum::Impl(_))
 }
 
 fn is_free_standing_impl(item: &&rustdoc_types::Item) -> bool {
-    if !item
-        .attrs
-        .contains(&String::from("#[cfg(not(generated_extern_impl))]"))
-    {
+    if !item.attrs.contains(&String::from(MARKER_TRAIT_JSON)) {
         return false;
     }
     matches!(item.inner, rustdoc_types::ItemEnum::Function(_))
