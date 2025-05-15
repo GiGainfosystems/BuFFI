@@ -70,7 +70,7 @@ dependencies = [
 
 [[package]]
 name = "buffi"
-version = "0.3.0+rust.1.86.0"
+version = "0.3.0+rust.1.87.0"
 dependencies = [
  "bincode",
  "buffi_macro",
