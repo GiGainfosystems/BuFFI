@@ -11,9 +11,9 @@ categories = ["development-tools::ffi"]
 readme = "../README.md"
 
 [dependencies]
-proc-macro2 = "1.0.89"
-syn = { version = "2.0.85", features = ["full", "extra-traits"] }
-quote = "1.0.37"
+proc-macro2 = "1.0.95"
+syn = { version = "2.0.104", features = ["full", "extra-traits"] }
+quote = "1.0.40"
 
 [lib]
 proc-macro = true
