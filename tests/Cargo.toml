@@ -6,5 +6,5 @@ publish = false
 
 [dependencies]
 buffi = { path = "../buffi" }
-toml = "0.8.19"
-similar-asserts = "1.6.0"
+toml = "0.8.23"
+similar-asserts = "1.7.0"
