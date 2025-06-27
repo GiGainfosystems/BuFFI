@@ -242,10 +242,7 @@ impl ItemResolver {
                 return item.clone();
             }
         }
-        panic!(
-            "Unknown id: {:?}, crate: {:?} (full type:{:?})",
-            id, parent_crate, t
-        );
+        panic!("Unknown id: {id:?}, crate: {parent_crate:?} (full type:{t:?})");
     }
 
     fn load_extern_crate_doc(
@@ -474,7 +471,7 @@ fn generate_function_definitions(
     for (t, _) in relevant_impls.iter() {
         if let rustdoc_types::Type::ResolvedPath(p) = t {
             let name = get_name_without_path(&p.path);
-            writeln!(extern_c_header, "struct {};\n", name).unwrap();
+            writeln!(extern_c_header, "struct {name};\n").unwrap();
         } else {
             unreachable!()
         }
@@ -636,7 +633,7 @@ fn generate_function_def(
             let type_string = reflect_type
                 .last()
                 .map(|(f, _)| to_cpp_type_name(f))
-                .unwrap_or_else(|| panic!("Unknown type: {:?}", tpe));
+                .unwrap_or_else(|| panic!("Unknown type: {tpe:?}"));
             (name, type_string)
         })
         .collect::<Vec<_>>();
@@ -743,8 +740,7 @@ fn generate_function_def(
     .unwrap();
     writeln!(
         out_functions,
-        "        {}_free_byte_buffer(out_ptr, res_size);",
-        prefix
+        "        {prefix}_free_byte_buffer(out_ptr, res_size);"
     )
     .unwrap();
     writeln!(out_functions).unwrap();

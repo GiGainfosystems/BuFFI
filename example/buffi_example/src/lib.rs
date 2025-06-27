@@ -51,7 +51,7 @@ impl TestClient {
 
     /// Here we use a type from a third party crate and return `()`
     pub fn use_foreign_type_and_return_nothing(&self, point: Point1<f64>) -> Result<(), String> {
-        println!("{:?}", point);
+        println!("{point:?}");
         Ok(())
     }
 }
