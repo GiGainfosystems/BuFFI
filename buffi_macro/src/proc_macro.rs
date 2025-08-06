@@ -44,29 +44,29 @@ fn generate_exported_functions_for_impl_block(
 ) -> Result<(), syn::Error> {
     let mut syn_error: Option<syn::Error> = None;
     for item in &impl_item.items {
-        if let syn::ImplItem::Fn(m) = item {
-            if matches!(m.vis, syn::Visibility::Public(_)) {
-                let self_ty = &impl_item.self_ty;
-                let docs = m.attrs.iter().filter(|a| a.path().is_ident("doc"));
+        if let syn::ImplItem::Fn(m) = item
+            && matches!(m.vis, syn::Visibility::Public(_))
+        {
+            let self_ty = &impl_item.self_ty;
+            let docs = m.attrs.iter().filter(|a| a.path().is_ident("doc"));
 
-                let mut arg_list = Vec::new();
-                arg_list.push(quote::quote!(this_ptr: *mut #self_ty));
+            let mut arg_list = Vec::new();
+            arg_list.push(quote::quote!(this_ptr: *mut #self_ty));
 
-                match generate_exported_function(
-                    &m.sig,
-                    arg_list,
-                    exports,
-                    docs,
-                    item.span(),
-                    prefix.clone(),
-                ) {
-                    Ok(_) => (),
-                    Err(new_error) => {
-                        if let Some(e) = syn_error.as_mut() {
-                            e.combine(new_error);
-                        } else {
-                            syn_error = Some(new_error);
-                        }
+            match generate_exported_function(
+                &m.sig,
+                arg_list,
+                exports,
+                docs,
+                item.span(),
+                prefix.clone(),
+            ) {
+                Ok(_) => (),
+                Err(new_error) => {
+                    if let Some(e) = syn_error.as_mut() {
+                        e.combine(new_error);
+                    } else {
+                        syn_error = Some(new_error);
                     }
                 }
             }

@@ -76,7 +76,7 @@ dependencies = [
 
 [[package]]
 name = "buffi"
-version = "0.3.1+rust.1.88.0"
+version = "0.3.2+rust.1.89.0"
 dependencies = [
  "bincode",
  "buffi_macro",
@@ -100,7 +100,7 @@ dependencies = [
 
 [[package]]
 name = "buffi_macro"
-version = "0.3.1"
+version = "0.3.2"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -295,11 +295,12 @@ checksum = "989e6739f80c4ad5b13e0fd7fe89531180375b18520cc8c82080e4dc4035b84f"
 
 [[package]]
 name = "rustdoc-types"
-version = "0.39.0"
+version = "0.53.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e3b61d5673c3f4b49d35be6a58c49210596f61b8db580bc3b6d9dee5e9dc5458"
+checksum = "53175c56be456e96171b9c3efcd8e5216fbb7b40cc6355a1953090556621205b"
 dependencies = [
  "serde",
+ "serde_derive",
 ]
 
 [[package]]
