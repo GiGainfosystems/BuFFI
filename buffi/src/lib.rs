@@ -895,7 +895,7 @@ fn to_cpp_type_name(f: &serde_reflection::Format) -> String {
     }
 }
 
-fn to_type_name(f: &serde_reflection::Format) -> Cow<str> {
+fn to_type_name(f: &serde_reflection::Format) -> Cow<'_, str> {
     match f {
         serde_reflection::Format::Variable(_) => unimplemented!(),
         serde_reflection::Format::TypeName(n) => Cow::Borrowed(n),
@@ -1172,11 +1172,12 @@ fn to_serde_reflect_type(
         rustdoc_types::Type::ResolvedPath(p) => {
             let t = crate_map.resolve_index(Some(p), &p.id, parent_crate);
             let parent_crate = extract_crate_from_span(&t).expect("parent crate is set");
-            if let Some(comment_map) = comment_map {
-                if let Some(ref doc) = t.docs {
-                    comment_map.insert(vec![namespace.to_owned(), p.path.clone()], doc.clone());
-                }
+            if let Some(comment_map) = comment_map
+                && let Some(ref doc) = t.docs
+            {
+                comment_map.insert(vec![namespace.to_owned(), p.path.clone()], doc.clone());
             }
+
             if let rustdoc_types::ItemEnum::Struct(rustdoc_types::Struct {
                 kind: rustdoc_types::StructKind::Plain { ref fields, .. },
                 ..
@@ -1299,11 +1300,12 @@ fn to_serde_reflect_type(
         rustdoc_types::Type::Pat { .. } => unimplemented!(),
 
         rustdoc_types::Type::BorrowedRef { type_, .. } => {
-            if let rustdoc_types::Type::Generic(s) = &**type_ {
-                if s == "Self" {
-                    return Vec::new();
-                }
+            if let rustdoc_types::Type::Generic(s) = &**type_
+                && s == "Self"
+            {
+                return Vec::new();
             }
+
             dbg!(t);
             unimplemented!()
         }
@@ -1409,18 +1411,19 @@ fn generate_exported_enum(
         let mut enum_def = BTreeMap::new();
         for (id, variant) in e.variants.iter().enumerate() {
             let v = crate_map.resolve_index(None, variant, parent_crate);
-            if let Some(comment_map) = comment_map {
-                if let Some(ref docs) = v.docs {
-                    comment_map.insert(
-                        vec![
-                            namespace.to_owned(),
-                            p.path.clone(),
-                            v.name.clone().unwrap(),
-                        ],
-                        docs.clone(),
-                    );
-                }
+            if let Some(comment_map) = comment_map
+                && let Some(ref docs) = v.docs
+            {
+                comment_map.insert(
+                    vec![
+                        namespace.to_owned(),
+                        p.path.clone(),
+                        v.name.clone().unwrap(),
+                    ],
+                    docs.clone(),
+                );
             }
+
             match v.inner {
                 rustdoc_types::ItemEnum::Variant(rustdoc_types::Variant {
                     kind: rustdoc_types::VariantKind::Plain,
@@ -1443,46 +1446,45 @@ fn generate_exported_enum(
                         if let Some(t) = id
                             .as_ref()
                             .map(|id| crate_map.resolve_index(None, id, parent_crate))
+                            && let rustdoc_types::ItemEnum::StructField(ref tpe) = t.inner
                         {
-                            if let rustdoc_types::ItemEnum::StructField(ref tpe) = t.inner {
-                                // check for a custom serde attribute here
-                                // this allows us to specify different types for the c++ side
-                                // we expect that we always set a fully qualified path to an type there
-                                // (we control that, as it's our source, so that shouldn't be an problem)
-                                if let Some(serde_type) = t.attrs.iter().find_map(|a| {
-                                    let pref = a.strip_prefix("#[serde(with = \"")?;
-                                    Some(&pref[..pref.len() - 3])
-                                }) {
-                                    let item = crate_map.resolve_by_path(
-                                        serde_type,
-                                        parent_crate,
-                                        rustdoc_types::ItemKind::Struct,
-                                    );
-                                    let tpe = rustdoc_types::Type::ResolvedPath(item);
-                                    let tps = to_serde_reflect_type(
-                                        &tpe,
-                                        crate_map,
-                                        comment_map,
-                                        Vec::new(),
-                                        parent_crate,
-                                        namespace,
-                                        type_map,
-                                    );
-                                    variants.push(tps.last().unwrap().0.clone());
-                                    out.extend(tps);
-                                } else {
-                                    let tps = to_serde_reflect_type(
-                                        tpe,
-                                        crate_map,
-                                        comment_map,
-                                        Vec::new(),
-                                        parent_crate,
-                                        namespace,
-                                        type_map,
-                                    );
-                                    variants.push(tps.last().unwrap().0.clone());
-                                    out.extend(tps);
-                                }
+                            // check for a custom serde attribute here
+                            // this allows us to specify different types for the c++ side
+                            // we expect that we always set a fully qualified path to an type there
+                            // (we control that, as it's our source, so that shouldn't be an problem)
+                            if let Some(serde_type) = t.attrs.iter().find_map(|a| {
+                                let pref = a.strip_prefix("#[serde(with = \"")?;
+                                Some(&pref[..pref.len() - 3])
+                            }) {
+                                let item = crate_map.resolve_by_path(
+                                    serde_type,
+                                    parent_crate,
+                                    rustdoc_types::ItemKind::Struct,
+                                );
+                                let tpe = rustdoc_types::Type::ResolvedPath(item);
+                                let tps = to_serde_reflect_type(
+                                    &tpe,
+                                    crate_map,
+                                    comment_map,
+                                    Vec::new(),
+                                    parent_crate,
+                                    namespace,
+                                    type_map,
+                                );
+                                variants.push(tps.last().unwrap().0.clone());
+                                out.extend(tps);
+                            } else {
+                                let tps = to_serde_reflect_type(
+                                    tpe,
+                                    crate_map,
+                                    comment_map,
+                                    Vec::new(),
+                                    parent_crate,
+                                    namespace,
+                                    type_map,
+                                );
+                                variants.push(tps.last().unwrap().0.clone());
+                                out.extend(tps);
                             }
                         }
                     }
@@ -1594,17 +1596,17 @@ fn generate_exported_struct(
             .iter()
             .map(|id| crate_map.resolve_index(None, id, parent_crate))
             .filter_map(|s| {
-                if let Some(comment_map) = comment_map {
-                    if let Some(ref doc) = s.docs {
-                        comment_map.insert(
-                            vec![
-                                namespace.to_owned(),
-                                p.path.clone(),
-                                s.name.clone().unwrap(),
-                            ],
-                            doc.clone(),
-                        );
-                    }
+                if let Some(comment_map) = comment_map
+                    && let Some(ref doc) = s.docs
+                {
+                    comment_map.insert(
+                        vec![
+                            namespace.to_owned(),
+                            p.path.clone(),
+                            s.name.clone().unwrap(),
+                        ],
+                        doc.clone(),
+                    );
                 }
                 if let rustdoc_types::ItemEnum::StructField(ref tpe) = s.inner {
                     let parent_args = if let Some(rustdoc_types::GenericArgs::AngleBracketed {
