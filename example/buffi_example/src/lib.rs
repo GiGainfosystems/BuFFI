@@ -1,6 +1,7 @@
 #![allow(unexpected_cfgs)]
 
 use cgmath::Point1;
+use chrono::{DateTime, Utc};
 use serde::Serialize;
 use std::sync::Arc;
 use tokio::runtime::Runtime;
@@ -32,6 +33,31 @@ pub struct CustomType {
     pub some_content: i64,
     /// A cyclic reference that's a bit more complex
     pub itself: Option<Box<CustomType>>,
+    /// An enum that contains a remote type that we would like to use in the API
+    pub random_enum: RandomEnum,
+}
+
+#[derive(Serialize)]
+pub enum RandomEnum {
+    /// An empty case that is here to make the test simpler
+    NoValue,
+    /// A timestamp from chrono that we would like to use in the API
+    TimeStamp(#[serde(with = "crate::DateTimeHelper")] DateTime<Utc>),
+}
+
+#[derive(Serialize)]
+#[serde(remote = "DateTime<Utc>")]
+pub struct DateTimeHelper {
+    /// milliseconds since 1.1.1970 00:00:00
+    #[serde(getter = "DateTime::timestamp_millis")]
+    pub milliseconds_since_unix_epoch: i64,
+}
+
+impl From<DateTimeHelper> for DateTime<Utc> {
+    fn from(value: DateTimeHelper) -> Self {
+        DateTime::from_timestamp_millis(value.milliseconds_since_unix_epoch)
+            .expect("Valid timestamp")
+    }
 }
 
 #[buffi::exported]
@@ -46,6 +72,7 @@ impl TestClient {
         Ok(CustomType {
             some_content: content,
             itself: None,
+            random_enum: RandomEnum::NoValue,
         })
     }
 
