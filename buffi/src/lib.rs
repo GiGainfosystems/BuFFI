@@ -17,6 +17,7 @@
 //!
 #![doc = include_str!(concat!("../", env!("CARGO_PKG_README")))]
 
+use rustdoc_types::Attribute;
 use serde::{Deserialize, Serialize};
 use serde_generate::SourceInstaller;
 use std::borrow::Cow;
@@ -37,7 +38,7 @@ pub use bincode;
 pub use buffi_macro::*;
 
 const FUNCTION_PREFIX: &str = "buffi";
-const MARKER_TRAIT_JSON: &str = "#[<cfg>(not(generated_extern_impl))]";
+const MARKER_TRAIT_STR: &str = "#[<cfg>(not(generated_extern_impl))]";
 
 #[derive(Debug, serde::Deserialize)]
 struct WorkspaceMetadata {
@@ -106,7 +107,9 @@ struct ItemResolver {
 
 impl ItemResolver {
     fn new(json_path: String, api_lib_name: &str) -> Self {
-        let content = std::fs::read_to_string(json_path.clone() + api_lib_name + ".json").unwrap();
+        let full_path = json_path.clone() + api_lib_name + ".json";
+        let content = std::fs::read_to_string(full_path.clone())
+            .unwrap_or_else(|_| panic!("Failed to read file: {full_path}"));
         let doc_types = serde_json::from_str(&content).unwrap();
         Self {
             base_path: json_path,
@@ -1450,10 +1453,13 @@ fn generate_exported_enum(
                         {
                             // check for a custom serde attribute here
                             // this allows us to specify different types for the c++ side
-                            // we expect that we always set a fully qualified path to an type there
-                            // (we control that, as it's our source, so that shouldn't be an problem)
+                            // we expect that we always set a fully qualified path to a type there
+                            // (we control that, as it's our source, so that shouldn't be a problem)
                             if let Some(serde_type) = t.attrs.iter().find_map(|a| {
-                                let pref = a.strip_prefix("#[serde(with = \"")?;
+                                let pref = match a {
+                                    Attribute::Other(a) => a.strip_prefix("#[serde(with = \"")?,
+                                    _ => return None,
+                                };
                                 Some(&pref[..pref.len() - 3])
                             }) {
                                 let item = crate_map.resolve_by_path(
@@ -1663,14 +1669,16 @@ fn generate_exported_struct(
 }
 
 fn is_relevant_impl(item: &&rustdoc_types::Item) -> bool {
-    if !item.attrs.contains(&String::from(MARKER_TRAIT_JSON)) {
+    let marker_attribute = Attribute::Other(MARKER_TRAIT_STR.into());
+    if !item.attrs.contains(&marker_attribute) {
         return false;
     }
     matches!(item.inner, rustdoc_types::ItemEnum::Impl(_))
 }
 
 fn is_free_standing_impl(item: &&rustdoc_types::Item) -> bool {
-    if !item.attrs.contains(&String::from(MARKER_TRAIT_JSON)) {
+    let marker_attribute = Attribute::Other(MARKER_TRAIT_STR.into());
+    if !item.attrs.contains(&marker_attribute) {
         return false;
     }
     matches!(item.inner, rustdoc_types::ItemEnum::Function(_))
