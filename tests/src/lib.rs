@@ -66,6 +66,8 @@ mod tests {
             read_file.insert(file_name.to_owned());
         }
 
+        let ignore_files = [".DS_Store"];
+
         // now check if all the files in the include directory are represented in the temp directory
         for f in fs::read_dir(&include_dir).unwrap() {
             let entry = f.unwrap();
@@ -76,7 +78,7 @@ mod tests {
                 .to_str()
                 .unwrap();
 
-            if !read_file.contains(file_name) {
+            if !read_file.contains(file_name) && !ignore_files.contains(&file_name) {
                 panic!(
                     "`{}` exists in the include directory, but not in the generated output",
                     path.display()
