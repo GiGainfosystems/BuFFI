@@ -3,6 +3,5 @@ api_lib_name = "buffi_example"
 parent_crate = "buffi_example"
 rustdoc_crates = [
     "buffi_example",
-    "cgmath",
-    "chrono"
+    "cgmath"
 ]

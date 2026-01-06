@@ -49,6 +49,8 @@ namespace BUFFI_NAMESPACE {
         std::optional<serde::value_ptr<BUFFI_NAMESPACE::CustomType>> itself;
         /// An enum that contains a remote type that we would like to use in the API
         BUFFI_NAMESPACE::RandomEnum random_enum;
+        /// A struct field using a proxy type for (de)serialization
+        BUFFI_NAMESPACE::DateTimeHelper proxy;
 
         friend bool operator==(const CustomType&, const CustomType&);
         std::vector<uint8_t> bincodeSerialize() const;
@@ -180,6 +182,7 @@ namespace BUFFI_NAMESPACE {
         if (!(lhs.some_content == rhs.some_content)) { return false; }
         if (!(lhs.itself == rhs.itself)) { return false; }
         if (!(lhs.random_enum == rhs.random_enum)) { return false; }
+        if (!(lhs.proxy == rhs.proxy)) { return false; }
         return true;
     }
 
@@ -207,6 +210,7 @@ void serde::Serializable<BUFFI_NAMESPACE::CustomType>::serialize(const BUFFI_NAM
     serde::Serializable<decltype(obj.some_content)>::serialize(obj.some_content, serializer);
     serde::Serializable<decltype(obj.itself)>::serialize(obj.itself, serializer);
     serde::Serializable<decltype(obj.random_enum)>::serialize(obj.random_enum, serializer);
+    serde::Serializable<decltype(obj.proxy)>::serialize(obj.proxy, serializer);
     serializer.decrease_container_depth();
 }
 
@@ -218,6 +222,7 @@ BUFFI_NAMESPACE::CustomType serde::Deserializable<BUFFI_NAMESPACE::CustomType>::
     obj.some_content = serde::Deserializable<decltype(obj.some_content)>::deserialize(deserializer);
     obj.itself = serde::Deserializable<decltype(obj.itself)>::deserialize(deserializer);
     obj.random_enum = serde::Deserializable<decltype(obj.random_enum)>::deserialize(deserializer);
+    obj.proxy = serde::Deserializable<decltype(obj.proxy)>::deserialize(deserializer);
     deserializer.decrease_container_depth();
     return obj;
 }
