@@ -1451,47 +1451,17 @@ fn generate_exported_enum(
                             .map(|id| crate_map.resolve_index(None, id, parent_crate))
                             && let rustdoc_types::ItemEnum::StructField(ref tpe) = t.inner
                         {
-                            // check for a custom serde attribute here
-                            // this allows us to specify different types for the c++ side
-                            // we expect that we always set a fully qualified path to a type there
-                            // (we control that, as it's our source, so that shouldn't be a problem)
-                            if let Some(serde_type) = t.attrs.iter().find_map(|a| {
-                                let pref = match a {
-                                    Attribute::Other(a) => a.strip_prefix("#[serde(with = \"")?,
-                                    _ => return None,
-                                };
-                                Some(&pref[..pref.len() - 3])
-                            }) {
-                                let item = crate_map.resolve_by_path(
-                                    serde_type,
-                                    parent_crate,
-                                    rustdoc_types::ItemKind::Struct,
-                                );
-                                let tpe = rustdoc_types::Type::ResolvedPath(item);
-                                let tps = to_serde_reflect_type(
-                                    &tpe,
-                                    crate_map,
-                                    comment_map,
-                                    Vec::new(),
-                                    parent_crate,
-                                    namespace,
-                                    type_map,
-                                );
-                                variants.push(tps.last().unwrap().0.clone());
-                                out.extend(tps);
-                            } else {
-                                let tps = to_serde_reflect_type(
-                                    tpe,
-                                    crate_map,
-                                    comment_map,
-                                    Vec::new(),
-                                    parent_crate,
-                                    namespace,
-                                    type_map,
-                                );
-                                variants.push(tps.last().unwrap().0.clone());
-                                out.extend(tps);
-                            }
+                            let args = HandleDatatypeFieldArgs {
+                                crate_map,
+                                attrs: &t.attrs,
+                                tpe,
+                                parent_crate,
+                                namespace,
+                                parent_args: Vec::new(),
+                            };
+                            let tps = handle_datatype_field(args, type_map, comment_map);
+                            variants.push(tps.last().unwrap().0.clone());
+                            out.extend(tps);
                         }
                     }
                     if variants.len() == 1 {
@@ -1554,6 +1524,62 @@ fn generate_exported_enum(
     let name = get_name_without_path(&p.path);
     out.push((Format::TypeName(name.to_owned()), container_format));
     out
+}
+
+struct HandleDatatypeFieldArgs<'a> {
+    crate_map: &'a ItemResolver,
+    parent_crate: &'a str,
+    namespace: &'a str,
+    attrs: &'a [rustdoc_types::Attribute],
+    tpe: &'a rustdoc_types::Type,
+    parent_args: Vec<rustdoc_types::GenericArg>,
+}
+
+fn handle_datatype_field(
+    args: HandleDatatypeFieldArgs,
+    type_map: &mut HashMap<rustdoc_types::Type, TypeCache>,
+    comment_map: &mut Option<BTreeMap<Vec<String>, String>>,
+) -> Vec<(
+    serde_reflection::Format,
+    Option<serde_reflection::ContainerFormat>,
+)> {
+    // check for a custom serde attribute here
+    // this allows us to specify different types for the c++ side
+    // we expect that we always set a fully qualified path to a type there
+    // (we control that, as it's our source, so that shouldn't be a problem)
+    if let Some(serde_type) = args.attrs.iter().find_map(|a| {
+        let pref = match a {
+            Attribute::Other(a) => a.strip_prefix("#[serde(with = \"")?,
+            _ => return None,
+        };
+        Some(&pref[..pref.len() - 3])
+    }) {
+        let item = args.crate_map.resolve_by_path(
+            serde_type,
+            args.parent_crate,
+            rustdoc_types::ItemKind::Struct,
+        );
+        let tpe = rustdoc_types::Type::ResolvedPath(item);
+        to_serde_reflect_type(
+            &tpe,
+            args.crate_map,
+            comment_map,
+            args.parent_args,
+            args.parent_crate,
+            args.namespace,
+            type_map,
+        )
+    } else {
+        to_serde_reflect_type(
+            args.tpe,
+            args.crate_map,
+            comment_map,
+            args.parent_args,
+            args.parent_crate,
+            args.namespace,
+            type_map,
+        )
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1636,17 +1662,18 @@ fn generate_exported_struct(
                     } else {
                         Vec::new()
                     };
+
+                    let args = HandleDatatypeFieldArgs {
+                        crate_map,
+                        parent_crate,
+                        namespace,
+                        attrs: &s.attrs,
+                        tpe,
+                        parent_args,
+                    };
                     Some((
                         s.name.clone().unwrap(),
-                        to_serde_reflect_type(
-                            tpe,
-                            crate_map,
-                            comment_map,
-                            parent_args,
-                            parent_crate,
-                            namespace,
-                            type_map,
-                        ),
+                        handle_datatype_field(args, type_map, comment_map),
                     ))
                 } else {
                     None

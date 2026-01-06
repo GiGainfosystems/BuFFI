@@ -35,6 +35,9 @@ pub struct CustomType {
     pub itself: Option<Box<CustomType>>,
     /// An enum that contains a remote type that we would like to use in the API
     pub random_enum: RandomEnum,
+    /// A struct field using a proxy type for (de)serialization
+    #[serde(with = "crate::DateTimeHelper")]
+    pub proxy: DateTime<Utc>,
 }
 
 #[derive(Serialize)]
@@ -73,6 +76,7 @@ impl TestClient {
             some_content: content,
             itself: None,
             random_enum: RandomEnum::NoValue,
+            proxy: DateTime::from_timestamp(0, 0).expect("In bounds"),
         })
     }
 
