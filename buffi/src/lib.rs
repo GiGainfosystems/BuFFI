@@ -124,7 +124,7 @@ impl ItemResolver {
         path: &str,
         parent_crate: &str,
         requested_item: rustdoc_types::ItemKind,
-    ) -> rustdoc_types::Path {
+    ) -> (String, rustdoc_types::Path) {
         let mut parts = path.split("::").collect::<Vec<_>>();
         if parts[0] == "crate" {
             parts[0] = parent_crate;
@@ -152,11 +152,15 @@ impl ItemResolver {
                 );
             }
         };
-        rustdoc_types::Path {
-            path: parts[parts.len() - 1].to_owned(),
-            id,
-            args: None,
-        }
+        let parent_crate = parts[0].to_owned();
+        (
+            parent_crate,
+            rustdoc_types::Path {
+                path: parts[parts.len() - 1].to_owned(),
+                id,
+                args: None,
+            },
+        )
     }
 
     fn resolve_index(
@@ -1554,7 +1558,7 @@ fn handle_datatype_field(
         };
         Some(&pref[..pref.len() - 3])
     }) {
-        let item = args.crate_map.resolve_by_path(
+        let (parent_crate, item) = args.crate_map.resolve_by_path(
             serde_type,
             args.parent_crate,
             rustdoc_types::ItemKind::Struct,
@@ -1565,7 +1569,7 @@ fn handle_datatype_field(
             args.crate_map,
             comment_map,
             args.parent_args,
-            args.parent_crate,
+            &parent_crate,
             args.namespace,
             type_map,
         )
