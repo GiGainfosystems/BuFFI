@@ -1,0 +1,1 @@
+../../buffi_macro/src/buffi_annotation_attributes.rs

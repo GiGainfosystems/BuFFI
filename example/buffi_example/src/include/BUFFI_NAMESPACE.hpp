@@ -51,6 +51,13 @@ namespace BUFFI_NAMESPACE {
         BUFFI_NAMESPACE::RandomEnum random_enum;
         /// A struct field using a proxy type for (de)serialization
         BUFFI_NAMESPACE::DateTimeHelper proxy;
+        /// Test a type overwrite
+        std::string overwrite;
+        /// using a nested type also works
+        std::vector<std::string> overwrite_2;
+        /// This field uses a custom serialization and deserialization logic
+        /// via serde
+        std::string custom;
 
         friend bool operator==(const CustomType&, const CustomType&);
         std::vector<uint8_t> bincodeSerialize() const;
@@ -183,6 +190,9 @@ namespace BUFFI_NAMESPACE {
         if (!(lhs.itself == rhs.itself)) { return false; }
         if (!(lhs.random_enum == rhs.random_enum)) { return false; }
         if (!(lhs.proxy == rhs.proxy)) { return false; }
+        if (!(lhs.overwrite == rhs.overwrite)) { return false; }
+        if (!(lhs.overwrite_2 == rhs.overwrite_2)) { return false; }
+        if (!(lhs.custom == rhs.custom)) { return false; }
         return true;
     }
 
@@ -211,6 +221,9 @@ void serde::Serializable<BUFFI_NAMESPACE::CustomType>::serialize(const BUFFI_NAM
     serde::Serializable<decltype(obj.itself)>::serialize(obj.itself, serializer);
     serde::Serializable<decltype(obj.random_enum)>::serialize(obj.random_enum, serializer);
     serde::Serializable<decltype(obj.proxy)>::serialize(obj.proxy, serializer);
+    serde::Serializable<decltype(obj.overwrite)>::serialize(obj.overwrite, serializer);
+    serde::Serializable<decltype(obj.overwrite_2)>::serialize(obj.overwrite_2, serializer);
+    serde::Serializable<decltype(obj.custom)>::serialize(obj.custom, serializer);
     serializer.decrease_container_depth();
 }
 
@@ -223,6 +236,9 @@ BUFFI_NAMESPACE::CustomType serde::Deserializable<BUFFI_NAMESPACE::CustomType>::
     obj.itself = serde::Deserializable<decltype(obj.itself)>::deserialize(deserializer);
     obj.random_enum = serde::Deserializable<decltype(obj.random_enum)>::deserialize(deserializer);
     obj.proxy = serde::Deserializable<decltype(obj.proxy)>::deserialize(deserializer);
+    obj.overwrite = serde::Deserializable<decltype(obj.overwrite)>::deserialize(deserializer);
+    obj.overwrite_2 = serde::Deserializable<decltype(obj.overwrite_2)>::deserialize(deserializer);
+    obj.custom = serde::Deserializable<decltype(obj.custom)>::deserialize(deserializer);
     deserializer.decrease_container_depth();
     return obj;
 }

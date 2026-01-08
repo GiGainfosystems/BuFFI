@@ -1,5 +1,8 @@
-mod proc_macro;
 use ::proc_macro::TokenStream;
+
+mod annotation;
+mod buffi_annotation_attributes;
+mod proc_macro;
 
 const FUNCTION_PREFIX: &str = "buffi";
 
@@ -34,4 +37,13 @@ pub fn exported(_att: TokenStream, item: TokenStream) -> TokenStream {
         }
     }
     .into()
+}
+
+/// A helper derive to put annotations for the codegen on struct and enum fields
+#[proc_macro_derive(Annotation, attributes(buffi, serde))]
+pub fn annotation(item: TokenStream) -> TokenStream {
+    syn::parse(item)
+        .and_then(annotation::expand)
+        .unwrap_or_else(|e| e.to_compile_error())
+        .into()
 }
