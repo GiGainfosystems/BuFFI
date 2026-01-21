@@ -141,5 +141,5 @@ You can also have a look at the slides [here](knowledge/RustLab2024.pdf). They a
 
 ## License
 
-* Apache License, Version 2.0 (https://www.apache.org/licenses/LICENSE-2.0).
-* MIT License (https://opensource.org/licenses/MIT)
+* Apache License, Version 2.0 (<https://www.apache.org/licenses/LICENSE-2.0>).
+* MIT License (<https://opensource.org/licenses/MIT>)

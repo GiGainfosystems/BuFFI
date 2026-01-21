@@ -10,7 +10,7 @@ use std::path::PathBuf;
 /// these types.
 ///
 /// It's also fine to add new implementations to buffi itself if
-/// that invariant is uphold.
+/// that invariant is upheld.
 ///
 /// Not upholding this invariant either results in a deserialization
 /// failure or silent data corruption as bincode might interpret the
