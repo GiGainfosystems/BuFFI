@@ -1,8 +1,11 @@
 #![allow(unexpected_cfgs)]
 
+use buffi::SafeTypeMapping;
 use cgmath::Point1;
 use chrono::{DateTime, Utc};
-use serde::Serialize;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use std::borrow::Cow;
+use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::runtime::Runtime;
 
@@ -27,7 +30,7 @@ pub extern "C" fn get_test_client() -> *mut TestClient {
 }
 
 /// A custom type that needs to be available in C++ as well
-#[derive(Serialize)]
+#[derive(Serialize, buffi::Annotation, Deserialize)]
 pub struct CustomType {
     /// Some content
     pub some_content: i64,
@@ -38,9 +41,27 @@ pub struct CustomType {
     /// A struct field using a proxy type for (de)serialization
     #[serde(with = "crate::DateTimeHelper")]
     pub proxy: DateTime<Utc>,
+    /// Test a type overwrite
+    #[buffi(type = String)]
+    pub overwrite: Cow<'static, str>,
+    /// using a nested type also works
+    #[buffi(type = Vec<String>)]
+    pub overwrite_2: Option<Cow<'static, [String]>>,
+
+    /// This field shouldn't be there in the c++ bindings
+    #[serde(default)]
+    #[serde(skip)]
+    #[buffi(skip)]
+    pub skip: PathBuf,
+    /// This field uses a custom serialization and deserialization logic
+    /// via serde
+    #[serde(serialize_with = "crate::SerializationHelper::serialize")]
+    #[serde(deserialize_with = "crate::SerializationHelper::deserialize")]
+    #[buffi(type = String)]
+    pub custom: Cow<'static, str>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 pub enum RandomEnum {
     /// An empty case that is here to make the test simpler
     NoValue,
@@ -48,7 +69,7 @@ pub enum RandomEnum {
     TimeStamp(#[serde(with = "crate::DateTimeHelper")] DateTime<Utc>),
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 #[serde(remote = "DateTime<Utc>")]
 pub struct DateTimeHelper {
     /// milliseconds since 1.1.1970 00:00:00
@@ -77,6 +98,10 @@ impl TestClient {
             itself: None,
             random_enum: RandomEnum::NoValue,
             proxy: DateTime::from_timestamp(0, 0).expect("In bounds"),
+            overwrite: Cow::Borrowed("test"),
+            overwrite_2: None,
+            skip: PathBuf::from("/tmp"),
+            custom: Cow::Borrowed("test2"),
         })
     }
 
@@ -104,5 +129,26 @@ pub unsafe extern "C" fn buffi_free_byte_buffer(ptr: *mut u8, size: usize) {
         drop(v);
     }
 }
+
+struct SerializationHelper;
+
+impl SerializationHelper {
+    fn serialize<S>(v: &str, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        v.serialize(serializer)
+    }
+
+    fn deserialize<'de, D>(deserializer: D) -> Result<Cow<'static, str>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        Ok(Cow::Owned(s))
+    }
+}
+
+impl SafeTypeMapping<SerializationHelper> for String {}
 
 pub mod errors;

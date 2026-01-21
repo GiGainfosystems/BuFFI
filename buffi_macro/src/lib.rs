@@ -1,5 +1,8 @@
-mod proc_macro;
 use ::proc_macro::TokenStream;
+
+mod annotation;
+mod buffi_annotation_attributes;
+mod proc_macro;
 
 const FUNCTION_PREFIX: &str = "buffi";
 
@@ -34,4 +37,40 @@ pub fn exported(_att: TokenStream, item: TokenStream) -> TokenStream {
         }
     }
     .into()
+}
+
+/// A helper derive to put annotations for the codegen on struct and enum fields
+///
+/// Available annotations are `#[buffi(skip)]` and `#[buffi(type = SomeType]`. See below
+/// how they can be utilized.
+///
+/// Putting this derive on a type that is available via a public API allows to modify
+/// availability of fields or which specific type should be used in the FFI if type
+/// mapping is not obvious.
+///
+/// Skipping a field
+///
+/// `#[buffi(skip)]` can be used together with `#[serde(skip)]` and `#[serde(default)]`
+/// to hide fields from the FFI. In that case when this type is used in the FFI it will
+/// appear on the Rust side with a default value set for that specific field.
+///
+/// Modifying the type mapping
+///
+/// `#[buffi(type = SomeType]` can be used in cases where the Rust type is not the desired type for
+/// the FFI. It applies either where the binary representation created by serde matches
+/// another type (e.g. for `url::Url` and `String` where you have `Url` on the Rust side
+/// and want `String` in your FFI) or where the application of custom (de-)serialization
+/// is required. This second use case is connected to `#[serde(serialize_with = ...]` and
+/// `#[serde(deserialize_with = ...]`. Both annotations have to be present and have to
+/// point to functions implemented on a (helper) struct that implements buffi's `SafeTypeMapping`
+/// trait.
+///
+/// Buffi already provides some implementations of `SafeTypeMapping`. Also check if some
+/// additional implementations can be utilized via crate features (e.g. `url2`).
+#[proc_macro_derive(Annotation, attributes(buffi, serde))]
+pub fn annotation(item: TokenStream) -> TokenStream {
+    syn::parse(item)
+        .and_then(annotation::expand)
+        .unwrap_or_else(|e| e.to_compile_error())
+        .into()
 }

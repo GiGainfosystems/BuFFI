@@ -34,11 +34,24 @@ use std::path::PathBuf;
 use std::path::{Component, Path};
 use std::process::{Output, Stdio};
 
+pub use self::traits::SafeTypeMapping;
 pub use bincode;
 pub use buffi_macro::*;
 
+mod traits;
+
+mod buffi_annotation_attributes;
+
 const FUNCTION_PREFIX: &str = "buffi";
 const MARKER_TRAIT_STR: &str = "#[<cfg>(not(generated_extern_impl))]";
+
+type FieldList = Vec<(
+    String,
+    Vec<(
+        serde_reflection::Format,
+        Option<serde_reflection::ContainerFormat>,
+    )>,
+)>;
 
 #[derive(Debug, serde::Deserialize)]
 struct WorkspaceMetadata {
@@ -125,24 +138,39 @@ impl ItemResolver {
         parent_crate: &str,
         requested_item: rustdoc_types::ItemKind,
     ) -> (String, rustdoc_types::Path) {
-        let mut parts = path.split("::").collect::<Vec<_>>();
-        if parts[0] == "crate" {
-            parts[0] = parent_crate;
-        }
+        let mut parts = path.split("::").map(|c| c.to_owned()).collect::<Vec<_>>();
         let id = {
             let mut other_crates = self.other_crates.borrow_mut();
-            let map = if parts[0] == parent_crate {
+            // for path referring to `crate` or any "path" that's only the type name we guess that it's the local crate
+            // we don't have any other guess
+            let map = if parts[0] == parent_crate || parts[0] == "crate" || parts.len() == 1 {
                 &self.doc_types
             } else {
                 other_crates.entry(parts[0].to_owned()).or_insert_with(|| {
-                    self.load_extern_crate_doc(parts[0], &format!("(needed for {path:?})"))
+                    self.load_extern_crate_doc(&parts[0], &format!("(needed for {path:?})"))
                 })
             };
+            if parts[0] == "crate" {
+                if let Some(guess) = map.paths.iter().find_map(|(_, i)| {
+                    (i.path[0] == parent_crate).then_some(parent_crate.to_owned())
+                }) {
+                    parts[0] = guess;
+                } else if let Some(guess) = map
+                    .paths
+                    .iter()
+                    .find_map(|(_, i)| (i.crate_id == 0).then_some(i.path[0].clone()))
+                {
+                    parts[0] = guess;
+                } else {
+                    panic!("Cannot resolve parent crate");
+                }
+            }
+
             let (id, summary) = map
                 .paths
                 .iter()
-                .find(|(_, i)| i.path == parts)
-                .expect("It's there");
+                .find(|(_, i)| i.kind == requested_item && i.path.ends_with(&parts))
+                .unwrap_or_else(|| panic!("Failed to lookup type {parts:?}"));
             if summary.kind == requested_item {
                 *id
             } else {
@@ -242,6 +270,9 @@ impl ItemResolver {
                         ) | (
                             rustdoc_types::ItemEnum::Enum(_),
                             rustdoc_types::ItemKind::Enum
+                        ) | (
+                            rustdoc_types::ItemEnum::Function(_),
+                            rustdoc_types::ItemKind::Function
                         )
                     )
             });
@@ -268,6 +299,7 @@ impl ItemResolver {
     }
 }
 
+#[derive(Debug)]
 enum TypeCache {
     NeedToPopulate,
     Cached(
@@ -1185,12 +1217,11 @@ fn to_serde_reflect_type(
                 comment_map.insert(vec![namespace.to_owned(), p.path.clone()], doc.clone());
             }
 
-            if let rustdoc_types::ItemEnum::Struct(rustdoc_types::Struct {
-                kind: rustdoc_types::StructKind::Plain { ref fields, .. },
-                ..
-            }) = t.inner
-            {
-                return generate_exported_struct(
+            match t.inner {
+                rustdoc_types::ItemEnum::Struct(rustdoc_types::Struct {
+                    kind: rustdoc_types::StructKind::Plain { ref fields, .. },
+                    ..
+                }) => generate_exported_struct(
                     fields,
                     crate_map,
                     comment_map,
@@ -1200,14 +1231,11 @@ fn to_serde_reflect_type(
                     namespace,
                     type_map,
                     recursive_type,
-                );
-            }
-            if let rustdoc_types::ItemEnum::Struct(rustdoc_types::Struct {
-                kind: rustdoc_types::StructKind::Unit,
-                ..
-            }) = t.inner
-            {
-                return generate_exported_struct(
+                ),
+                rustdoc_types::ItemEnum::Struct(rustdoc_types::Struct {
+                    kind: rustdoc_types::StructKind::Unit,
+                    ..
+                }) => generate_exported_struct(
                     &[],
                     crate_map,
                     comment_map,
@@ -1217,10 +1245,8 @@ fn to_serde_reflect_type(
                     namespace,
                     type_map,
                     recursive_type,
-                );
-            }
-            if let rustdoc_types::ItemEnum::Enum(ref e) = t.inner {
-                return generate_exported_enum(
+                ),
+                rustdoc_types::ItemEnum::Enum(ref e) => generate_exported_enum(
                     e,
                     crate_map,
                     comment_map,
@@ -1229,10 +1255,8 @@ fn to_serde_reflect_type(
                     namespace,
                     type_map,
                     recursive_type,
-                );
-            }
-            if let rustdoc_types::ItemEnum::TypeAlias(ref t) = t.inner {
-                return to_serde_reflect_type(
+                ),
+                rustdoc_types::ItemEnum::TypeAlias(ref t) => to_serde_reflect_type(
                     &t.type_,
                     crate_map,
                     comment_map,
@@ -1240,10 +1264,12 @@ fn to_serde_reflect_type(
                     &parent_crate,
                     namespace,
                     type_map,
-                );
+                ),
+                t => {
+                    dbg!(t);
+                    unimplemented!();
+                }
             }
-            dbg!(t);
-            unimplemented!()
         }
         rustdoc_types::Type::DynTrait(_) => unimplemented!(),
         rustdoc_types::Type::Generic(p) => {
@@ -1351,20 +1377,19 @@ fn extract_crate_from_span(t: &rustdoc_types::Item) -> Option<String> {
             s.replace('-', "_")
         }
         Some(Component::RootDir | Component::Prefix(_)) => {
-            // that's likely a path tho the cargo registry
+            // that's likely a path to the cargo registry
             // So go to `.cargo`, remove 3 additional directories
             // and get the crate name
             // It's something like
             // `/home/weiznich/.cargo/registry/src/github.com-1ecc6299db9ec823/giga-segy-core-0.3.2/src/header_structs.rs`
             loop {
-                match components.next() {
-                    Some(Component::Normal(e))
+                match components.next()? {
+                    Component::Normal(e)
                         if (e == ".cargo" || e == "cargo")
                             && matches!(components.peek(), Some(Component::Normal(e)) if *e == "registry") =>
                     {
                         break;
                     }
-                    None => panic!("Unexpected end of path: {}", p.display()),
                     _ => {}
                 }
             }
@@ -1462,10 +1487,17 @@ fn generate_exported_enum(
                                 parent_crate,
                                 namespace,
                                 parent_args: Vec::new(),
+                                field_name: v.name.as_deref(),
                             };
-                            let tps = handle_datatype_field(args, type_map, comment_map);
-                            variants.push(tps.last().unwrap().0.clone());
-                            out.extend(tps);
+                            for (field_name, tps) in
+                                handle_datatype_field(args, type_map, comment_map)
+                            {
+                                variants.push(serde_reflection::Named {
+                                    name: field_name,
+                                    value: tps.last().unwrap().0.clone(),
+                                });
+                                out.extend(tps);
+                            }
                         }
                     }
                     if variants.len() == 1 {
@@ -1473,11 +1505,12 @@ fn generate_exported_enum(
                         enum_def.insert(
                             id as u32,
                             serde_reflection::Named {
-                                name: v.name.clone().unwrap(),
-                                value: serde_reflection::VariantFormat::NewType(x),
+                                name: x.name,
+                                value: serde_reflection::VariantFormat::NewType(Box::new(x.value)),
                             },
                         );
                     } else {
+                        let variants = variants.into_iter().map(|v| v.value).collect();
                         enum_def.insert(
                             id as u32,
                             serde_reflection::Named {
@@ -1495,20 +1528,24 @@ fn generate_exported_enum(
                     for id in fields {
                         let t = crate_map.resolve_index(None, id, parent_crate);
                         if let rustdoc_types::ItemEnum::StructField(ref tpe) = t.inner {
-                            let tps = to_serde_reflect_type(
-                                tpe,
+                            let args = HandleDatatypeFieldArgs {
                                 crate_map,
-                                comment_map,
-                                Vec::new(),
+                                attrs: &t.attrs,
+                                tpe,
                                 parent_crate,
                                 namespace,
-                                type_map,
-                            );
-                            variants.push(serde_reflection::Named {
-                                name: t.name.unwrap(),
-                                value: tps.last().unwrap().0.clone(),
-                            });
-                            out.extend(tps);
+                                parent_args: Vec::new(),
+                                field_name: t.name.as_deref(),
+                            };
+                            for (field_name, tps) in
+                                handle_datatype_field(args, type_map, comment_map)
+                            {
+                                variants.push(serde_reflection::Named {
+                                    name: field_name,
+                                    value: tps.last().unwrap().0.clone(),
+                                });
+                                out.extend(tps);
+                            }
                         }
                     }
 
@@ -1530,6 +1567,217 @@ fn generate_exported_enum(
     out
 }
 
+#[derive(Default, Debug)]
+struct FieldAttributes {
+    serde_with: Option<String>,
+    buffi_type: Option<syn::Path>,
+    buffi_skip: bool,
+}
+
+struct AttributeHelper(syn::Attribute);
+
+impl syn::parse::Parse for AttributeHelper {
+    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        let mut attrs = syn::Attribute::parse_outer(input)?;
+        assert_eq!(attrs.len(), 1, "Only expect a single attribute here");
+        let attr = attrs.pop().unwrap();
+        Ok(Self(attr))
+    }
+}
+
+impl FieldAttributes {
+    fn parse_attributes(attrs: &[rustdoc_types::Attribute]) -> Self {
+        let mut field_attrs = Self::default();
+        for attr in attrs {
+            if let rustdoc_types::Attribute::Other(r) = attr
+                && let Ok(AttributeHelper(attr)) = syn::parse_str(r)
+            {
+                if attr.path().is_ident("serde")
+                    && let syn::Meta::List(args) = &attr.meta
+                    && let Ok(attr) = args.parse_args::<SerdeAttribute>()
+                {
+                    match attr {
+                        SerdeAttribute::Flatten => {
+                            unimplemented!("`#[serde(flatten)]` is not supported by bincode")
+                        }
+                        SerdeAttribute::With(w) => field_attrs.serde_with = Some(w),
+                        // Ignore these
+                        SerdeAttribute::Unknown(_) => {}
+                    }
+                } else if attr.path().is_ident("buffi")
+                    && let Ok(attr) =
+                        attr.parse_args::<buffi_annotation_attributes::BuffiAnnotation>()
+                {
+                    match attr {
+                        buffi_annotation_attributes::BuffiAnnotation::Tpe(tpe) => {
+                            field_attrs.buffi_type = Some(tpe)
+                        }
+                        buffi_annotation_attributes::BuffiAnnotation::Skip => {
+                            field_attrs.buffi_skip = true
+                        }
+                    }
+                }
+            }
+        }
+        field_attrs
+    }
+
+    fn valid_combination(&self) -> bool {
+        match (
+            self.buffi_type.is_some(),
+            self.serde_with.is_some(),
+            self.buffi_skip,
+        ) {
+            (false, false, false)
+            | (true, false, false)
+            | (false, true, false)
+            | (false, false, true) => true,
+            _ => {
+                panic!("Invalid  attribute configuration: {self:?}")
+            }
+        }
+    }
+
+    fn resolve_types(
+        &self,
+        args: HandleDatatypeFieldArgs<'_>,
+        type_map: &mut HashMap<rustdoc_types::Type, TypeCache>,
+        comment_map: &mut Option<BTreeMap<Vec<String>, String>>,
+    ) -> FieldList {
+        assert!(self.valid_combination());
+        match (
+            self.serde_with.as_deref(),
+            self.buffi_type.as_ref(),
+            self.buffi_skip,
+        ) {
+            // `#[buffi(skip)]` just means do nothing
+            // We verify the invariants in the derive already, so
+            // we don't need to perform additional checks here
+            (None, None, true) => Vec::new(),
+            // `#[serde(with = "other::Type")]` which just means use `other::Type` instead of
+            // the actual field type
+            (Some(with), None, false) => {
+                let (parent_crate, item) = args.crate_map.resolve_by_path(
+                    with,
+                    args.parent_crate,
+                    rustdoc_types::ItemKind::Struct,
+                );
+                let tpe = rustdoc_types::Type::ResolvedPath(item);
+                vec![(
+                    args.field_name.unwrap_or_default().to_owned(),
+                    to_serde_reflect_type(
+                        &tpe,
+                        args.crate_map,
+                        comment_map,
+                        args.parent_args,
+                        &parent_crate,
+                        args.namespace,
+                        type_map,
+                    ),
+                )]
+            }
+            // `#[buffi(type = String)]`
+            (None, Some(syn_path), false) => {
+                let (parent_crate, item) = syn_path_to_rustdoc_item(&args, syn_path);
+                let tpe = rustdoc_types::Type::ResolvedPath(item);
+                vec![(
+                    args.field_name.unwrap_or_default().to_owned(),
+                    to_serde_reflect_type(
+                        &tpe,
+                        args.crate_map,
+                        comment_map,
+                        args.parent_args,
+                        &parent_crate,
+                        args.namespace,
+                        type_map,
+                    ),
+                )]
+            }
+            (None, None, false) => vec![(
+                args.field_name.unwrap_or_default().to_owned(),
+                to_serde_reflect_type(
+                    args.tpe,
+                    args.crate_map,
+                    comment_map,
+                    args.parent_args,
+                    args.parent_crate,
+                    args.namespace,
+                    type_map,
+                ),
+            )],
+            _ => unreachable!("We checked for these patterns above, they should not occur"),
+        }
+    }
+}
+
+fn syn_path_to_rustdoc_item(
+    infer_args: &HandleDatatypeFieldArgs<'_>,
+    syn_path: &syn::Path,
+) -> (String, rustdoc_types::Path) {
+    let path = syn_path
+        .segments
+        .iter()
+        .map(|s| {
+            // ignore generic args here
+            s.ident.to_string()
+        })
+        .collect::<Vec<_>>()
+        .join("::");
+    let (parent_crate, mut item) = infer_args.crate_map.resolve_by_path(
+        &path,
+        infer_args.parent_crate,
+        rustdoc_types::ItemKind::Struct,
+    );
+    if let syn::PathArguments::AngleBracketed(args) = &syn_path
+        .segments
+        .last()
+        .expect("There is at least one segment")
+        .arguments
+    {
+        let out = args
+            .args
+            .iter()
+            .map(|a| match a {
+                syn::GenericArgument::Type(syn::Type::Path(path)) => {
+                    let (_parent_crate, item) = syn_path_to_rustdoc_item(infer_args, &path.path);
+                    rustdoc_types::GenericArg::Type(rustdoc_types::Type::ResolvedPath(item))
+                }
+                _ => unimplemented!("Only type arguments are supported by buffi"),
+            })
+            .collect::<Vec<_>>();
+        if !out.is_empty() {
+            item.args = Some(Box::new(rustdoc_types::GenericArgs::AngleBracketed {
+                args: out,
+                constraints: Vec::new(),
+            }));
+        }
+    }
+    (parent_crate, item)
+}
+
+#[derive(Debug)]
+enum SerdeAttribute {
+    Flatten,
+    With(String),
+    #[expect(dead_code)]
+    Unknown(String),
+}
+
+impl syn::parse::Parse for SerdeAttribute {
+    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        let ident = input.parse::<syn::Ident>()?;
+        match ident {
+            i if i == "with" => {
+                let _ = input.parse::<syn::Token![=]>()?;
+                let string = input.parse::<syn::LitStr>()?;
+                Ok(Self::With(string.value()))
+            }
+            i if i == "flatten" => Ok(Self::Flatten),
+            i => Ok(Self::Unknown(i.to_string())),
+        }
+    }
+}
+
 struct HandleDatatypeFieldArgs<'a> {
     crate_map: &'a ItemResolver,
     parent_crate: &'a str,
@@ -1537,53 +1785,20 @@ struct HandleDatatypeFieldArgs<'a> {
     attrs: &'a [rustdoc_types::Attribute],
     tpe: &'a rustdoc_types::Type,
     parent_args: Vec<rustdoc_types::GenericArg>,
+    field_name: Option<&'a str>,
 }
 
 fn handle_datatype_field(
     args: HandleDatatypeFieldArgs,
     type_map: &mut HashMap<rustdoc_types::Type, TypeCache>,
     comment_map: &mut Option<BTreeMap<Vec<String>, String>>,
-) -> Vec<(
-    serde_reflection::Format,
-    Option<serde_reflection::ContainerFormat>,
-)> {
+) -> FieldList {
     // check for a custom serde attribute here
     // this allows us to specify different types for the c++ side
     // we expect that we always set a fully qualified path to a type there
     // (we control that, as it's our source, so that shouldn't be a problem)
-    if let Some(serde_type) = args.attrs.iter().find_map(|a| {
-        let pref = match a {
-            Attribute::Other(a) => a.strip_prefix("#[serde(with = \"")?,
-            _ => return None,
-        };
-        Some(&pref[..pref.len() - 3])
-    }) {
-        let (parent_crate, item) = args.crate_map.resolve_by_path(
-            serde_type,
-            args.parent_crate,
-            rustdoc_types::ItemKind::Struct,
-        );
-        let tpe = rustdoc_types::Type::ResolvedPath(item);
-        to_serde_reflect_type(
-            &tpe,
-            args.crate_map,
-            comment_map,
-            args.parent_args,
-            &parent_crate,
-            args.namespace,
-            type_map,
-        )
-    } else {
-        to_serde_reflect_type(
-            args.tpe,
-            args.crate_map,
-            comment_map,
-            args.parent_args,
-            args.parent_crate,
-            args.namespace,
-            type_map,
-        )
-    }
+    let attrs = FieldAttributes::parse_attributes(args.attrs);
+    attrs.resolve_types(args, type_map, comment_map)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1628,27 +1843,64 @@ fn generate_exported_struct(
         // we don't need that for a recursive type
         None
     } else {
-        let fields = fields
-            .iter()
-            .map(|id| crate_map.resolve_index(None, id, parent_crate))
-            .filter_map(|s| {
-                if let Some(comment_map) = comment_map
-                    && let Some(ref doc) = s.docs
-                {
-                    comment_map.insert(
-                        vec![
-                            namespace.to_owned(),
-                            p.path.clone(),
-                            s.name.clone().unwrap(),
-                        ],
-                        doc.clone(),
-                    );
-                }
-                if let rustdoc_types::ItemEnum::StructField(ref tpe) = s.inner {
-                    let parent_args = if let Some(rustdoc_types::GenericArgs::AngleBracketed {
-                        args,
-                        constraints,
-                    }) = p.args.as_deref()
+        let fields = generate_struct_fields(
+            fields,
+            crate_map,
+            comment_map,
+            p.path.clone(),
+            p,
+            parent_args,
+            parent_crate,
+            namespace,
+            type_map,
+        );
+        let mut struct_fields = Vec::with_capacity(fields.len());
+        for (name, tpe) in fields {
+            let format = tpe.last().unwrap().0.clone();
+            struct_fields.push(serde_reflection::Named {
+                name,
+                value: format,
+            });
+            out.extend(tpe);
+        }
+        Some(ContainerFormat::Struct(struct_fields))
+    };
+    out.push((Format::TypeName(name), container_format));
+    out
+}
+
+#[allow(clippy::too_many_arguments)]
+fn generate_struct_fields(
+    fields: &[rustdoc_types::Id],
+    crate_map: &ItemResolver,
+    comment_map: &mut Option<BTreeMap<Vec<String>, String>>,
+    field_path: String,
+    p: &rustdoc_types::Path,
+    parent_args: Vec<rustdoc_types::GenericArg>,
+    parent_crate: &str,
+    namespace: &str,
+    type_map: &mut HashMap<rustdoc_types::Type, TypeCache>,
+) -> FieldList {
+    fields
+        .iter()
+        .map(|id| crate_map.resolve_index(None, id, parent_crate))
+        .flat_map(|s| {
+            if let Some(comment_map) = comment_map
+                && let Some(ref doc) = s.docs
+            {
+                comment_map.insert(
+                    vec![
+                        namespace.to_owned(),
+                        field_path.clone(),
+                        s.name.clone().unwrap(),
+                    ],
+                    doc.clone(),
+                );
+            }
+            if let rustdoc_types::ItemEnum::StructField(ref tpe) = s.inner {
+                let parent_args =
+                    if let Some(rustdoc_types::GenericArgs::AngleBracketed { args, constraints }) =
+                        p.args.as_deref()
                     {
                         if args.is_empty() && constraints.is_empty() {
                             Vec::new()
@@ -1667,36 +1919,22 @@ fn generate_exported_struct(
                         Vec::new()
                     };
 
-                    let args = HandleDatatypeFieldArgs {
-                        crate_map,
-                        parent_crate,
-                        namespace,
-                        attrs: &s.attrs,
-                        tpe,
-                        parent_args,
-                    };
-                    Some((
-                        s.name.clone().unwrap(),
-                        handle_datatype_field(args, type_map, comment_map),
-                    ))
-                } else {
-                    None
-                }
-            })
-            .collect::<Vec<_>>();
-        let mut struct_fields = Vec::with_capacity(fields.len());
-        for (name, tpe) in fields {
-            let format = tpe.last().unwrap().0.clone();
-            struct_fields.push(serde_reflection::Named {
-                name,
-                value: format,
-            });
-            out.extend(tpe);
-        }
-        Some(ContainerFormat::Struct(struct_fields))
-    };
-    out.push((Format::TypeName(name), container_format));
-    out
+                let args = HandleDatatypeFieldArgs {
+                    crate_map,
+                    parent_crate,
+                    namespace,
+                    attrs: &s.attrs,
+                    tpe,
+                    parent_args,
+                    field_name: s.name.as_deref(),
+                };
+
+                handle_datatype_field(args, type_map, comment_map)
+            } else {
+                vec![]
+            }
+        })
+        .collect::<Vec<_>>()
 }
 
 fn is_relevant_impl(item: &&rustdoc_types::Item) -> bool {
