@@ -43,7 +43,7 @@ mod traits;
 mod buffi_annotation_attributes;
 
 const FUNCTION_PREFIX: &str = "buffi";
-const MARKER_TRAIT_STR: &str = "#[<cfg>(not(generated_extern_impl))]";
+const MARKER_TRAIT_STR: &str = "#[<cfg_trace>(not(generated_extern_impl))]";
 
 type FieldList = Vec<(
     String,
