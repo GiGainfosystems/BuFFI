@@ -43,7 +43,6 @@ mod traits;
 mod buffi_annotation_attributes;
 
 const FUNCTION_PREFIX: &str = "buffi";
-const MARKER_TRAIT_STR: &str = "#[<cfg_trace>(not(generated_extern_impl))]";
 
 type FieldList = Vec<(
     String,
@@ -1937,20 +1936,24 @@ fn generate_struct_fields(
         .collect::<Vec<_>>()
 }
 
+fn has_marker_attribute(item: &rustdoc_types::Item) -> bool {
+    item.attrs.iter().any(|a| {
+        if let Attribute::Other(o) = a {
+            // other attributes now contain the span which changes from call site to call site
+            // therefore we only match the beginning
+            o.starts_with("#[attr = CfgTrace([Not(NameValue { name: \"generated_extern_impl\"")
+        } else {
+            false
+        }
+    })
+}
+
 fn is_relevant_impl(item: &&rustdoc_types::Item) -> bool {
-    let marker_attribute = Attribute::Other(MARKER_TRAIT_STR.into());
-    if !item.attrs.contains(&marker_attribute) {
-        return false;
-    }
-    matches!(item.inner, rustdoc_types::ItemEnum::Impl(_))
+    matches!(item.inner, rustdoc_types::ItemEnum::Impl(_)) && has_marker_attribute(item)
 }
 
 fn is_free_standing_impl(item: &&rustdoc_types::Item) -> bool {
-    let marker_attribute = Attribute::Other(MARKER_TRAIT_STR.into());
-    if !item.attrs.contains(&marker_attribute) {
-        return false;
-    }
-    matches!(item.inner, rustdoc_types::ItemEnum::Function(_))
+    matches!(item.inner, rustdoc_types::ItemEnum::Function(_)) && has_marker_attribute(item)
 }
 
 fn to_c_type(tpe: &rustdoc_types::Type) -> String {
