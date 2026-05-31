@@ -11,7 +11,9 @@ jobs:
     name: Check rustfmt style && run clippy
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6.0.1
+        with:
+          persist-credentials: false
       - uses: dtolnay/rust-toolchain@1.85.0
         with:
           components: clippy, rustfmt
@@ -28,7 +30,9 @@ jobs:
     name: Generate and check bindings of the basic example
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.85.0
+      - uses: actions/checkout@v6.0.1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@1.95.0
       - name: Run test
         run: cargo test -p tests
