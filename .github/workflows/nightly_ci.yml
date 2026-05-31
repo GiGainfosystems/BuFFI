@@ -1,0 +1,19 @@
+on:
+  workflow_dispatch:
+  # run at 5:30 on every day
+  schedule:
+    - cron: '30 5 * * *'
+
+name: BuFFI CI (test on nightly)
+
+jobs:
+  test_on_nightly:
+    name: Run the test on the latest nightly
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6.0.1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@nightly
+      - name: Run test on nightly
+        run: cargo +nightly test -p tests
