@@ -416,7 +416,10 @@ pub fn generate_docs(
         .arg("doc")
         .args(args)
         .env("RUSTC_BOOTSTRAP", bootstrap_crates)
-        .env("RUSTDOCFLAGS", "-Z unstable-options --output-format json ")
+        .env(
+            "RUSTDOCFLAGS",
+            "--cfg buffi -Z unstable-options --output-format json ",
+        )
         .env("CARGO_TARGET_DIR", &target_directory)
         .stderr(Stdio::inherit())
         .stdout(Stdio::inherit());
