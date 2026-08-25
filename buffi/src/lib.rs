@@ -291,7 +291,7 @@ impl ItemResolver {
             .unwrap_or_else(|_| {
                 panic!(
                     "Failed to find docs for `{}` {}",
-                    &crate_name, additional_message
+                    crate_name, additional_message
                 );
             });
         serde_json::from_str(&content).unwrap()
