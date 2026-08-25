@@ -34,7 +34,7 @@ impl SafeTypeMapping<PathBuf> for String {}
 impl SafeTypeMapping<Option<PathBuf>> for String {}
 impl SafeTypeMapping<Vec<PathBuf>> for Vec<String> {}
 
-// all types are compatible with themself
+// all types are compatible with themselves
 impl<T> SafeTypeMapping<T> for T {}
 
 #[cfg(feature = "url2")]
