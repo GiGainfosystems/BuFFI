@@ -91,7 +91,8 @@ impl From<DateTimeHelper> for DateTime<Utc> {
 #[buffi::exported]
 impl TestClient {
     /// A function that might use context provided by a TestClient to do its thing
-    pub fn client_function(&self, input: String) -> Result<String, String> {
+    /// For that purpose, it requires `&mut self`
+    pub fn client_function(&mut self, input: String) -> Result<String, String> {
         Ok(input)
     }
 
