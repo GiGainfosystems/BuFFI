@@ -48,6 +48,9 @@ pub struct CustomType {
     /// using a nested type also works
     #[buffi(type = Vec<String>)]
     pub overwrite_2: Option<Cow<'static, [String]>>,
+    /// type overwrite using an `Option`
+    #[buffi(type = Option<String>)]
+    pub overwrite_3: Option<String>,
 
     /// This field shouldn't be there in the c++ bindings
     #[serde(default)]
@@ -101,6 +104,7 @@ impl TestClient {
             proxy: DateTime::from_timestamp(0, 0).expect("In bounds"),
             overwrite: Cow::Borrowed("test"),
             overwrite_2: None,
+            overwrite_3: None,
             skip: PathBuf::from("/tmp"),
             custom: Cow::Borrowed("test2"),
         })

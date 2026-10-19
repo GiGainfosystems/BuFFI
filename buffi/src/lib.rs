@@ -131,12 +131,7 @@ impl ItemResolver {
     }
 
     // this function expects a fully qualified path.
-    fn resolve_by_path(
-        &self,
-        path: &str,
-        parent_crate: &str,
-        requested_item: rustdoc_types::ItemKind,
-    ) -> (String, rustdoc_types::Path) {
+    fn resolve_by_path(&self, path: &str, parent_crate: &str) -> (String, rustdoc_types::Path) {
         let mut parts = path.split("::").map(|c| c.to_owned()).collect::<Vec<_>>();
         let id = {
             let mut other_crates = self.other_crates.borrow_mut();
@@ -162,19 +157,17 @@ impl ItemResolver {
                 })
             };
 
-            let (id, summary) = map
+            let (id, _) = map
                 .paths
                 .iter()
-                .find(|(_, i)| i.kind == requested_item && i.path.ends_with(&parts))
+                .find(|(_, i)| {
+                    matches!(
+                        i.kind,
+                        rustdoc_types::ItemKind::Struct | rustdoc_types::ItemKind::Enum
+                    ) && i.path.ends_with(&parts)
+                })
                 .unwrap_or_else(|| panic!("Failed to lookup type {parts:?}"));
-            if summary.kind == requested_item {
-                *id
-            } else {
-                panic!(
-                    "Incompatible type: Expected {requested_item:?}, Got {:?}",
-                    summary.kind
-                );
-            }
+            *id
         };
         let parent_crate = parts[0].to_owned();
         (
@@ -1656,11 +1649,7 @@ impl FieldAttributes {
             // `#[serde(with = "other::Type")]` which just means use `other::Type` instead of
             // the actual field type
             (Some(with), None, false) => {
-                let (parent_crate, item) = args.crate_map.resolve_by_path(
-                    with,
-                    args.parent_crate,
-                    rustdoc_types::ItemKind::Struct,
-                );
+                let (parent_crate, item) = args.crate_map.resolve_by_path(with, args.parent_crate);
                 let tpe = rustdoc_types::Type::ResolvedPath(item);
                 vec![(
                     args.field_name.unwrap_or_default().to_owned(),
@@ -1722,11 +1711,9 @@ fn syn_path_to_rustdoc_item(
         })
         .collect::<Vec<_>>()
         .join("::");
-    let (parent_crate, mut item) = infer_args.crate_map.resolve_by_path(
-        &path,
-        infer_args.parent_crate,
-        rustdoc_types::ItemKind::Struct,
-    );
+    let (parent_crate, mut item) = infer_args
+        .crate_map
+        .resolve_by_path(&path, infer_args.parent_crate);
     if let syn::PathArguments::AngleBracketed(args) = &syn_path
         .segments
         .last()
