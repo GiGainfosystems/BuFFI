@@ -2034,3 +2034,57 @@ fn get_name_without_path(name: &str) -> &str {
     // sometimes the name include the full path now
     name.rsplit_once("::").map(|(_, e)| e).unwrap_or(name)
 }
+
+#[cfg(test)]
+mod tests {
+    use std::fs;
+    use std::process::Command;
+
+    /// Checks that the rustdoc JSON emitted by the active toolchain has the
+    /// format version that the `rustdoc-types` dependency was written for
+    #[test]
+    fn rustdoc_format_version_matches_rustdoc_types() {
+        let crate_name = "buffi_format_version_check";
+        let dir = std::env::temp_dir().join(format!("{crate_name}_{}", std::process::id()));
+        fs::create_dir_all(&dir).unwrap();
+        let src = dir.join("lib.rs");
+        fs::write(&src, "pub struct Empty;\n").unwrap();
+
+        let rustdoc = std::env::var("RUSTDOC").unwrap_or_else(|_| "rustdoc".to_owned());
+        let output = Command::new(rustdoc)
+            .args([
+                "--crate-name",
+                crate_name,
+                "--crate-type",
+                "lib",
+                "--edition",
+                "2024",
+            ])
+            .args(["-Z", "unstable-options", "--output-format", "json", "-o"])
+            .arg(&dir)
+            .arg(&src)
+            .env("RUSTC_BOOTSTRAP", crate_name)
+            .output()
+            .expect("Failed to run rustdoc");
+        assert!(
+            output.status.success(),
+            "rustdoc failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+
+        let content = fs::read_to_string(dir.join(format!("{crate_name}.json"))).unwrap();
+        fs::remove_dir_all(&dir).unwrap();
+        let json: serde_json::Value = serde_json::from_str(&content).unwrap();
+        let format_version = json["format_version"]
+            .as_u64()
+            .expect("rustdoc JSON contains a `format_version`");
+
+        assert_eq!(
+            format_version,
+            u64::from(rustdoc_types::FORMAT_VERSION),
+            "rustdoc emits JSON format version {format_version}, but `rustdoc-types` expects \
+             version {}. Update `rustdoc-types` to a version matching the toolchain.",
+            rustdoc_types::FORMAT_VERSION
+        );
+    }
+}
