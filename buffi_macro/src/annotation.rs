@@ -116,12 +116,13 @@ impl<'ast> syn::visit::Visit<'ast> for VerifyAttributes {
                 (Some(mut s), Some(mut d)) => {
                     let _ = s.segments.pop();
                     let last = s.segments.pop().unwrap();
-                    s.segments.push_value(last.value().clone());
+                    s.segments.push_value(last);
                     let _ = d.segments.pop();
                     let last = d.segments.pop().unwrap();
-                    d.segments.push_value(last.value().clone());
+                    d.segments.push_value(last);
                     if s == d {
                         rust_type = syn::Type::Path(syn::TypePath {
+                            attrs: vec![],
                             qself: None,
                             path: s,
                         });
@@ -144,6 +145,7 @@ impl<'ast> syn::visit::Visit<'ast> for VerifyAttributes {
                 span: f.ty.span(),
                 rust_type,
                 cpp_type: syn::Type::Path(syn::TypePath {
+                    attrs: vec![],
                     qself: None,
                     path: buffi_type,
                 }),
