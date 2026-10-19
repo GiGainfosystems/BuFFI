@@ -140,30 +140,27 @@ impl ItemResolver {
         let mut parts = path.split("::").map(|c| c.to_owned()).collect::<Vec<_>>();
         let id = {
             let mut other_crates = self.other_crates.borrow_mut();
-            // for path referring to `crate` or any "path" that's only the type name we guess that it's the local crate
-            // we don't have any other guess
-            let map = if parts[0] == parent_crate || parts[0] == "crate" || parts.len() == 1 {
+            // "crate" refers to the crate that contains the buffi attribute
+            if parts[0] == "crate" {
+                parts[0] = parent_crate.to_owned();
+            }
+            let api_crate = self
+                .doc_types
+                .index
+                .get(&self.doc_types.root)
+                .and_then(|i| i.name.as_deref());
+            // For a "path" that's only a typename we have to guess that it's coming from
+            // the local crate since we don't have any other guess
+            let map = if parts.len() == 1 || Some(parts[0].as_str()) == api_crate {
                 &self.doc_types
             } else {
+                // Since Rust 1.99, `self.doc_types` does not include any types anymore that were
+                // only referenced from that crate, but not included directly; that means to resolve
+                // a "referenced" type we need to check the actual crate it is coming from
                 other_crates.entry(parts[0].to_owned()).or_insert_with(|| {
                     self.load_extern_crate_doc(&parts[0], &format!("(needed for {path:?})"))
                 })
             };
-            if parts[0] == "crate" {
-                if let Some(guess) = map.paths.iter().find_map(|(_, i)| {
-                    (i.path[0] == parent_crate).then_some(parent_crate.to_owned())
-                }) {
-                    parts[0] = guess;
-                } else if let Some(guess) = map
-                    .paths
-                    .iter()
-                    .find_map(|(_, i)| (i.crate_id == 0).then_some(i.path[0].clone()))
-                {
-                    parts[0] = guess;
-                } else {
-                    panic!("Cannot resolve parent crate");
-                }
-            }
 
             let (id, summary) = map
                 .paths

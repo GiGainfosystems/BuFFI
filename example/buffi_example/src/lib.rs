@@ -1,6 +1,7 @@
 #![allow(unexpected_cfgs)]
 
 use buffi::SafeTypeMapping;
+use buffi_example_types::Timeout;
 use cgmath::Point1;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -109,6 +110,11 @@ impl TestClient {
     pub fn use_foreign_type_and_return_nothing(&self, point: Point1<f64>) -> Result<(), String> {
         println!("{point:?}");
         Ok(())
+    }
+
+    /// Here we use a type from another crate that uses a proxy type from that crate
+    pub fn use_type_from_other_crate(&self, timeout: Timeout) -> Result<Timeout, String> {
+        Ok(timeout)
     }
 }
 

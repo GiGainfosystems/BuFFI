@@ -13,3 +13,4 @@ serde = { version = "1.0.219", features = ["derive"] }
 tokio = { version = "1.45.1", features = ["rt-multi-thread"] }
 cgmath = { version = "0.18.0", features = ["serde"] }
 chrono = { version = "0.4.41", default-features = false, features = ["serde"] }
+buffi_example_types = { path = "../buffi_example_types" }

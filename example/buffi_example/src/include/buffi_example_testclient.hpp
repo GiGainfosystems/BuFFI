@@ -84,6 +84,29 @@ public:
         }
     }
 
+    // Here we use a type from another crate that uses a proxy type from that crate
+    inline Timeout use_type_from_other_crate(const Timeout& timeout) {
+        auto serializer_timeout = serde::BincodeSerializer();
+        serde::Serializable<Timeout>::serialize(timeout, serializer_timeout);
+        std::vector<uint8_t> timeout_serialized = std::move(serializer_timeout).bytes();
+        uint8_t* out_ptr = nullptr;
+
+        size_t res_size = buffi_use_type_from_other_crate(this->inner, timeout_serialized.data(), timeout_serialized.size(), &out_ptr);
+
+        std::vector<uint8_t> serialized_result(out_ptr, out_ptr + res_size);
+        Result_Timeout_SerializableError out = Result_Timeout_SerializableError::bincodeDeserialize(serialized_result);
+        buffi_free_byte_buffer(out_ptr, res_size);
+
+        if (out.value.index() == 0) { // Ok
+            auto ok = std::get<0>(out.value);
+            return std::get<0>(ok.value);
+        } else { // Err
+            auto err = std::get<1>(out.value);
+            auto error = std::get<0>(err.value);
+            throw error;
+        }
+    }
+
 };
 
 }  // end of namespace BUFFI_NAMESPACE
