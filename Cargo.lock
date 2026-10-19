@@ -94,10 +94,19 @@ name = "buffi_example"
 version = "0.1.0"
 dependencies = [
  "buffi",
+ "buffi_example_types",
  "cgmath",
  "chrono",
  "serde",
  "tokio",
+]
+
+[[package]]
+name = "buffi_example_types"
+version = "0.1.0"
+dependencies = [
+ "buffi",
+ "serde",
 ]
 
 [[package]]

@@ -1,0 +1,9 @@
+[package]
+name = "buffi_example_types"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+buffi = { path = "../../buffi" }
+serde = { version = "1.0.219", features = ["derive"] }
