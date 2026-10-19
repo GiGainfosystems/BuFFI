@@ -40,6 +40,7 @@ public:
     }
 
     // A function that might use context provided by a TestClient to do its thing
+    // For that purpose, it requires `&mut self`
     inline std::string client_function(const std::string& input) {
         auto serializer_input = serde::BincodeSerializer();
         serde::Serializable<std::string>::serialize(input, serializer_input);

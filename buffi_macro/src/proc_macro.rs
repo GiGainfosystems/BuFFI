@@ -165,8 +165,11 @@ fn generate_exported_function<'a>(
         }
     });
     let mut_this = sig.inputs.first().and_then(|s| {
-        if let syn::FnArg::Receiver(r) = s {
-            r.mutability.map(|_| quote::quote!(mut))
+        if let syn::FnArg::Receiver(r) = s
+            && let syn::ReceiverKind::Reference(_, _, mutability) = r.kind
+            && mutability.is_some()
+        {
+            Some(quote::quote!(mut))
         } else {
             None
         }
