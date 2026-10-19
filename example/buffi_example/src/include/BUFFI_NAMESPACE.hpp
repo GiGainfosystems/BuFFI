@@ -55,6 +55,8 @@ namespace BUFFI_NAMESPACE {
         std::string overwrite;
         /// using a nested type also works
         std::vector<std::string> overwrite_2;
+        /// type overwrite using an `Option`
+        std::optional<std::string> overwrite_3;
         /// This field uses a custom serialization and deserialization logic
         /// via serde
         std::string custom;
@@ -253,6 +255,7 @@ namespace BUFFI_NAMESPACE {
         if (!(lhs.proxy == rhs.proxy)) { return false; }
         if (!(lhs.overwrite == rhs.overwrite)) { return false; }
         if (!(lhs.overwrite_2 == rhs.overwrite_2)) { return false; }
+        if (!(lhs.overwrite_3 == rhs.overwrite_3)) { return false; }
         if (!(lhs.custom == rhs.custom)) { return false; }
         return true;
     }
@@ -284,6 +287,7 @@ void serde::Serializable<BUFFI_NAMESPACE::CustomType>::serialize(const BUFFI_NAM
     serde::Serializable<decltype(obj.proxy)>::serialize(obj.proxy, serializer);
     serde::Serializable<decltype(obj.overwrite)>::serialize(obj.overwrite, serializer);
     serde::Serializable<decltype(obj.overwrite_2)>::serialize(obj.overwrite_2, serializer);
+    serde::Serializable<decltype(obj.overwrite_3)>::serialize(obj.overwrite_3, serializer);
     serde::Serializable<decltype(obj.custom)>::serialize(obj.custom, serializer);
     serializer.decrease_container_depth();
 }
@@ -299,6 +303,7 @@ BUFFI_NAMESPACE::CustomType serde::Deserializable<BUFFI_NAMESPACE::CustomType>::
     obj.proxy = serde::Deserializable<decltype(obj.proxy)>::deserialize(deserializer);
     obj.overwrite = serde::Deserializable<decltype(obj.overwrite)>::deserialize(deserializer);
     obj.overwrite_2 = serde::Deserializable<decltype(obj.overwrite_2)>::deserialize(deserializer);
+    obj.overwrite_3 = serde::Deserializable<decltype(obj.overwrite_3)>::deserialize(deserializer);
     obj.custom = serde::Deserializable<decltype(obj.custom)>::deserialize(deserializer);
     deserializer.decrease_container_depth();
     return obj;
