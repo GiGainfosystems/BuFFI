@@ -76,7 +76,7 @@ dependencies = [
 
 [[package]]
 name = "buffi"
-version = "0.3.15+rust.1.99.1"
+version = "0.3.16+rust.1.100.0"
 dependencies = [
  "bincode",
  "buffi_macro",
@@ -111,7 +111,7 @@ dependencies = [
 
 [[package]]
 name = "buffi_macro"
-version = "0.3.15"
+version = "0.3.16"
 dependencies = [
  "proc-macro2",
  "quote",
