@@ -3,6 +3,8 @@ on:
     types: [ checks_requested ]
   pull_request:
     types: [ opened, synchronize, reopened ]
+  push:
+    branches: [ main ]
 
 name: BuFFI CI
 
