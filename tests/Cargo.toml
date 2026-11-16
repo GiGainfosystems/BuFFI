@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 publish = false
 
-[dependencies]
+[dev-dependencies]
 buffi = { path = "../buffi" }
 toml = "0.8.23"
 similar-asserts = "1.7.0"
